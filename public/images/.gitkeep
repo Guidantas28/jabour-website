@@ -1,0 +1,14 @@
+# Esta pasta contém as imagens do site
+
+## Estrutura de pastas:
+- /rings - Imagens de anéis (engagement rings, wedding rings)
+- /diamonds - Imagens de diamantes
+- /jewellery - Imagens de outras joias
+- /about - Imagens para página About
+- /hero - Imagens para hero sections
+
+## Como usar:
+As imagens podem ser referenciadas no código usando caminhos como:
+- /images/rings/nome-do-anel.jpg
+- /images/diamonds/diamond-shape.jpg
+
