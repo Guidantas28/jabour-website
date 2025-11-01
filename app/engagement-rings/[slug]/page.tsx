@@ -2,9 +2,10 @@
 
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import { addToCart } from '@/lib/cart'
+import { supabase } from '@/lib/supabase'
 
 interface ProductPageProps {
   params: {
@@ -12,7 +13,7 @@ interface ProductPageProps {
   }
 }
 
-const products: Record<string, {
+const defaultProducts: Record<string, {
   name: string
   description: string
   price: string
@@ -48,10 +49,64 @@ const products: Record<string, {
 
 export default function ProductPage({ params }: ProductPageProps) {
   const router = useRouter()
-  const product = products[params.slug]
+  const [product, setProduct] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [selectedMetal, setSelectedMetal] = useState<string>('')
   const [selectedShape, setSelectedShape] = useState<string>('')
   const [showMessage, setShowMessage] = useState(false)
+
+  useEffect(() => {
+    fetchProduct()
+  }, [params.slug])
+
+  const fetchProduct = async () => {
+    try {
+      // Try to fetch from Supabase
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('slug', params.slug)
+        .eq('category', 'engagement-rings')
+        .single()
+
+      if (data && !error) {
+        setProduct({
+          name: data.name,
+          description: data.description,
+          price: data.price,
+          metals: Array.isArray(data.metals) ? data.metals : [],
+          diamondShapes: Array.isArray(data.diamond_shapes) ? data.diamond_shapes : [],
+          images: Array.isArray(data.images) ? data.images : [],
+        })
+      } else {
+        // Fallback to default products
+        const defaultProduct = defaultProducts[params.slug]
+        if (defaultProduct) {
+          setProduct(defaultProduct)
+        } else {
+          notFound()
+        }
+      }
+    } catch (error) {
+      // Fallback to default products
+      const defaultProduct = defaultProducts[params.slug]
+      if (defaultProduct) {
+        setProduct(defaultProduct)
+      } else {
+        notFound()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading product...</p>
+      </div>
+    )
+  }
 
   if (!product) {
     notFound()
@@ -127,7 +182,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4">Select Metal</h3>
               <div className="grid grid-cols-2 gap-4">
-                {product.metals.map((metal) => (
+                {product.metals.map((metal: string) => (
                   <button
                     key={metal}
                     onClick={() => setSelectedMetal(metal)}
@@ -147,7 +202,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             <div className="mb-8">
               <h3 className="text-lg font-semibold mb-4">Select Diamond Shape</h3>
               <div className="grid grid-cols-3 gap-4">
-                {product.diamondShapes.map((shape) => (
+                {product.diamondShapes.map((shape: string) => (
                   <button
                     key={shape}
                     onClick={() => setSelectedShape(shape)}

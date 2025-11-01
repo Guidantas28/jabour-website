@@ -81,7 +81,7 @@ export default function Header() {
           {/* Right Navigation - Account & Icons */}
           <div className="flex items-center space-x-6">
             <Link
-              href="/account"
+              href="/my-account"
               className="hidden md:flex items-center space-x-2 text-sm font-semibold uppercase tracking-wide text-gray-700 hover:text-gray-900 transition-colors"
             >
               <FaUser className="text-sm" />

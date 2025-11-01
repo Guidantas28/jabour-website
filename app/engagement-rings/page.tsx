@@ -1,7 +1,25 @@
 import Link from 'next/link'
+import Image from 'next/image'
+import { supabase } from '@/lib/supabase'
 
-export default function EngagementRingsPage() {
-  const rings = [
+export const revalidate = 60
+
+export default async function EngagementRingsPage() {
+  // Fetch products from Supabase
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .eq('category', 'engagement-rings')
+    .order('created_at', { ascending: false })
+
+  // Fallback to static data if no products in database
+  const rings = products && products.length > 0 ? products.map((p: any) => ({
+    id: p.slug,
+    name: p.name,
+    price: p.price,
+    metals: Array.isArray(p.metals) ? p.metals : [],
+    image: p.featured_image_url,
+  })) : [
     {
       id: 'classic-solitaire',
       name: 'Classic Solitaire',
