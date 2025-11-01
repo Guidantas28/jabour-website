@@ -45,3 +45,9 @@ export function removeFromCart(id: string) {
   localStorage.setItem(cartKey, JSON.stringify(updatedCart))
   return updatedCart
 }
+
+export function clearCart() {
+  const cartKey = 'cart'
+  localStorage.removeItem(cartKey)
+  return []
+}
