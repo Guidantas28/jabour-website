@@ -4,15 +4,23 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { FaBox, FaNewspaper, FaCog, FaSignOutAlt } from 'react-icons/fa'
-import { useAuth, signOut } from '@/lib/auth'
+import { useAuth, signOut, isAdminEmail } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 
 export default function AdminPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/admin/login')
+    if (!loading) {
+      if (!user) {
+        router.push('/admin/login')
+      } else if (!isAdminEmail(user.email)) {
+        // Usuário não tem permissão admin, fazer logout e redirecionar
+        supabase.auth.signOut().then(() => {
+          router.push('/admin/login')
+        })
+      }
     }
   }, [user, loading, router])
 

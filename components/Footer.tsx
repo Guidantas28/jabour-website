@@ -4,7 +4,7 @@ import { FaInstagram } from 'react-icons/fa'
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-gray-300 w-full left-0 right-0">
+    <footer className="bg-primary-900 text-gray-300 w-full left-0 right-0">
       <div className="container-custom section-padding w-full">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
@@ -14,7 +14,7 @@ export default function Footer() {
                 alt="Jabour Jewellery"
                 width={180}
                 height={72}
-                className="h-16 w-auto object-contain brightness-0 invert"
+                className="h-16 w-auto object-contain"
               />
             </Link>
             <p className="text-sm mb-4">
@@ -103,7 +103,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-12 pt-8">
+        <div className="border-t border-primary-800 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-gray-400">
               © {new Date().getFullYear()} Jabour Jewellery. All rights reserved.

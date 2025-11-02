@@ -23,6 +23,40 @@ export default function Home() {
     fetchProducts()
   }, [])
 
+  // Scroll animations with Intersection Observer
+  useEffect(() => {
+    // Wait for DOM to be ready
+    const setupObserver = () => {
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible')
+          }
+        })
+      }, observerOptions)
+
+      // Observe all elements with scroll animation classes
+      const animatedElements = document.querySelectorAll('.scroll-fade-in, .scroll-scale-in')
+      animatedElements.forEach((el) => observer.observe(el))
+
+      return () => {
+        animatedElements.forEach((el) => observer.unobserve(el))
+      }
+    }
+
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(setupObserver, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [rings, loading])
+
   const fetchProducts = async () => {
     try {
       const { data: products } = await supabase
@@ -83,15 +117,15 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-20 container-custom section-padding">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-light text-white mb-6 leading-tight tracking-wide">
+            <h1 className="fade-in-up text-4xl md:text-6xl lg:text-7xl font-light text-white mb-6 leading-tight tracking-wide" style={{ animationDelay: '0.2s' }}>
               Timeless Elegance<br />
               <span className="font-normal">Find Your Sparkle</span>
             </h1>
-            <p className="text-base md:text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
+            <p className="fade-in-up text-base md:text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed font-light" style={{ animationDelay: '0.4s' }}>
               Discover jewellery that captures light, beauty, and emotion,<br />
               timeless pieces to treasure forever.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <div className="fade-in-up flex flex-col sm:flex-row gap-3 justify-center items-center" style={{ animationDelay: '0.6s' }}>
               <Link href="/engagement-rings" className="bg-gold-500 hover:bg-gold-600 text-white px-6 py-3 rounded-sm font-light text-sm uppercase tracking-wider transition-colors min-w-[200px]">
                 Shop Engagement Rings
               </Link>
@@ -107,27 +141,27 @@ export default function Home() {
       <section className="section-padding bg-white">
         <div className="container-custom">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-8 text-center">
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center">
               <FaHammer className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Crafted In London</h3>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.1s' }}>
               <FaLeaf className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Ethical Sourcing</h3>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.2s' }}>
               <FaCertificate className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Certified Diamonds</h3>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.3s' }}>
               <FaShieldAlt className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Lifetime Warranty</h3>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.4s' }}>
               <FaRulerCombined className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Free Resizing</h3>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.5s' }}>
               <FaUndo className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">40 Days Returns</h3>
             </div>
@@ -138,7 +172,7 @@ export default function Home() {
       {/* Process Section */}
       <section className="section-padding bg-gray-50">
         <div className="container-custom">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 scroll-fade-in">
             <h2 className="text-4xl font-serif font-bold text-primary-900 mb-4">
               Start creating your ring
             </h2>
@@ -147,7 +181,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
+            <div className="scroll-scale-in text-center">
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 1
               </div>
@@ -156,7 +190,7 @@ export default function Home() {
                 Browse our collection of exquisite engagement rings and find your perfect style.
               </p>
             </div>
-            <div className="text-center">
+            <div className="scroll-scale-in text-center" style={{ transitionDelay: '0.2s' }}>
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 2
               </div>
@@ -165,7 +199,7 @@ export default function Home() {
                 Our experts are on hand to guide you through the options.
               </p>
             </div>
-            <div className="text-center">
+            <div className="scroll-scale-in text-center" style={{ transitionDelay: '0.4s' }}>
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 3
               </div>
@@ -175,7 +209,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="text-center mt-12">
+          <div className="text-center mt-12 scroll-fade-in">
             <Link href="/engagement-rings" className="btn-primary">
               Explore Ring Designs
             </Link>
@@ -186,13 +220,13 @@ export default function Home() {
       {/* Categories Section */}
       <section className="section-padding bg-white">
         <div className="container-custom">
-          <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12">
+          <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12 scroll-fade-in">
             Shop by Category
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Link
               href="/engagement-rings"
-              className="group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
             >
               <div className="absolute inset-0 flex items-center justify-center">
                 <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
@@ -202,7 +236,8 @@ export default function Home() {
             </Link>
             <Link
               href="/wedding-rings"
-              className="group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              style={{ transitionDelay: '0.15s' }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
                 <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
@@ -212,7 +247,8 @@ export default function Home() {
             </Link>
             <Link
               href="/diamonds"
-              className="group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              style={{ transitionDelay: '0.3s' }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
                 <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
@@ -222,7 +258,8 @@ export default function Home() {
             </Link>
             <Link
               href="/jewellery"
-              className="group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              style={{ transitionDelay: '0.45s' }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
                 <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
@@ -237,7 +274,7 @@ export default function Home() {
       {/* Popular Rings Section */}
       <section className="section-padding bg-gray-50">
         <div className="container-custom">
-          <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12">
+          <h2 className="scroll-fade-in text-4xl font-serif font-bold text-primary-900 text-center mb-12">
             Shop popular engagement rings
           </h2>
           {loading ? (
@@ -250,11 +287,12 @@ export default function Home() {
             </div>
           ) : (
             <div className={`grid gap-8 ${rings.length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : rings.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : rings.length === 3 ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
-              {rings.map((ring) => (
+              {rings.map((ring, index) => (
                 <Link
                   key={ring.id}
                   href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
-                  className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                  className="scroll-scale-in group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                  style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <div className="h-64 bg-gray-100 relative overflow-hidden">
                     {ring.featured_image_url || ring.image ? (

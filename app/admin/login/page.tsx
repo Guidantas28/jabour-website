@@ -16,6 +16,19 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError('')
 
+    // Lista de emails permitidos
+    const allowedEmails = [
+      'Info@jabourjewellery.com',
+      'guilhermedantas788@gmail.com'
+    ]
+
+    // Verificar se o email está na lista permitida antes de fazer login
+    if (!allowedEmails.includes(email.toLowerCase())) {
+      setError('Acesso negado. Este email não tem permissão para acessar o painel admin.')
+      setLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -25,6 +38,12 @@ export default function AdminLoginPage() {
       if (error) throw error
 
       if (data.user) {
+        // Verificar novamente após login bem-sucedido
+        if (!allowedEmails.includes(data.user.email?.toLowerCase() || '')) {
+          await supabase.auth.signOut()
+          setError('Acesso negado. Este email não tem permissão para acessar o painel admin.')
+          return
+        }
         router.push('/admin')
         router.refresh()
       }

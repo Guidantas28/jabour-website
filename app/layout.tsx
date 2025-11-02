@@ -18,6 +18,10 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'Jabour Jewellery - Bespoke Luxury Jewellery',
   description: 'Discover exquisite bespoke jewellery crafted with precision and care. Engagement rings, wedding rings, and fine jewellery collections.',
+  icons: {
+    icon: '/images/logo-jabour-new.png',
+    apple: '/images/logo-jabour-new.png',
+  },
 }
 
 export default function RootLayout({

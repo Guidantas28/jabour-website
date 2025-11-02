@@ -4,6 +4,17 @@ import { supabase } from './supabase'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+// Lista de emails permitidos para acesso admin
+const ALLOWED_ADMIN_EMAILS = [
+  'info@jabourjewellery.com',
+  'guilhermedantas788@gmail.com'
+]
+
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  return ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
 export function useAuth() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -34,8 +45,15 @@ export function useRequireAuth() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/admin/login')
+    if (!loading) {
+      if (!user) {
+        router.push('/admin/login')
+      } else if (!isAdminEmail(user.email)) {
+        // Usuário não tem permissão admin, fazer logout e redirecionar
+        supabase.auth.signOut().then(() => {
+          router.push('/admin/login')
+        })
+      }
     }
   }, [user, loading, router])
 
