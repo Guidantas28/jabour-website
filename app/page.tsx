@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { 
@@ -8,9 +10,58 @@ import {
   FaRulerCombined, 
   FaUndo 
 } from 'react-icons/fa'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import FAQ from '@/components/FAQ'
+import GoogleReviews from '@/components/GoogleReviews'
 
 export default function Home() {
+  const [rings, setRings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const fetchProducts = async () => {
+    try {
+      const { data: products } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', 'engagement-rings')
+        .order('created_at', { ascending: false })
+        .limit(4)
+
+      if (products && products.length > 0) {
+        setRings(products)
+      } else {
+        // Fallback to Marquise Solitaire
+        setRings([{
+          id: 'marquise-solitaire',
+          name: 'Marquise Solitaire',
+          price: 'From £1,200',
+          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
+          diamond_shapes: ['Marquise'],
+          style: 'solitaire',
+        }])
+      }
+      setLoading(false)
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      // Fallback to Marquise Solitaire on error
+      setRings([{
+        id: 'marquise-solitaire',
+        name: 'Marquise Solitaire',
+        price: 'From £1,200',
+        metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+        image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
+        diamond_shapes: ['Marquise'],
+        style: 'solitaire',
+      }])
+      setLoading(false)
+    }
+  }
   return (
     <>
       {/* Hero Section */}
@@ -189,35 +240,58 @@ export default function Home() {
           <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12">
             Shop popular engagement rings
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { name: 'Classic Solitaire', price: 'From £995', metal: 'Platinum' },
-              { name: 'Elegant Halo', price: 'From £1,550', metal: '18k Gold' },
-              { name: 'Timeless Trilogy', price: 'From £1,575', metal: 'Platinum' },
-              { name: 'Modern Vintage', price: 'From £1,195', metal: 'Rose Gold' },
-            ].map((ring, index) => (
-              <div key={index} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="h-64 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 border-4 border-primary-800 rounded-full mx-auto mb-4"></div>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">Loading products...</p>
+            </div>
+          ) : rings.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No products available at the moment.</p>
+            </div>
+          ) : (
+            <div className={`grid gap-8 ${rings.length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : rings.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : rings.length === 3 ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
+              {rings.map((ring) => (
+                <Link
+                  key={ring.id}
+                  href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
+                  className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                >
+                  <div className="h-64 bg-gray-100 relative overflow-hidden">
+                    {ring.featured_image_url || ring.image ? (
+                      <Image
+                        src={ring.featured_image_url || ring.image}
+                        alt={ring.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                        unoptimized={(ring.featured_image_url || ring.image)?.includes('supabase.co')}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                        <div className="w-24 h-24 border-4 border-primary-800 rounded-full group-hover:scale-110 transition-transform"></div>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-serif font-bold text-primary-900 mb-2">{ring.name}</h3>
-                  <p className="text-gray-600 mb-2">{ring.metal}</p>
-                  <p className="text-lg font-semibold text-primary-800 mb-4">{ring.price}</p>
-                  <Link
-                    href={`/engagement-rings/${ring.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    className="btn-secondary w-full text-center"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-serif font-bold text-primary-900 mb-2">{ring.name}</h3>
+                    <p className="text-gray-600 mb-2">
+                      {ring.metals && Array.isArray(ring.metals) && ring.metals.length > 0
+                        ? `Available in: ${ring.metals.slice(0, 2).join(', ')}${ring.metals.length > 2 ? ' + more' : ''}`
+                        : 'Available in various metals'}
+                    </p>
+                    <p className="text-lg font-semibold text-primary-800 mb-4">{ring.price || 'Price on request'}</p>
+                    <span className="btn-secondary w-full text-center inline-block">
+                      View Details
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
+
+      {/* Google Reviews Section */}
+      <GoogleReviews />
 
       {/* FAQ Section */}
       <FAQ />

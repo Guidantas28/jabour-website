@@ -4,6 +4,30 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { FaShoppingBag } from 'react-icons/fa'
 
+// Helper function to format metal names
+const formatMetal = (metal: string): string => {
+  const metalMap: Record<string, string> = {
+    'platinum': 'Platinum',
+    '18k-white-gold': '18k White Gold',
+    '18k-yellow-gold': '18k Yellow Gold',
+    '18k-rose-gold': '18k Rose Gold',
+    '9k-white-gold': '9k White Gold',
+    '9k-yellow-gold': '9k Yellow Gold',
+    '9k-rose-gold': '9k Rose Gold',
+  }
+  return metalMap[metal] || metal
+}
+
+// Helper function to format certificate names
+const formatCertificate = (cert: string): string => {
+  const certMap: Record<string, string> = {
+    'jabour': 'Jabour Certificate',
+    'idgl': 'IDGL',
+    'igi': 'IGI',
+  }
+  return certMap[cert] || cert
+}
+
 interface CartItem {
   id: string
   name: string
@@ -11,6 +35,14 @@ interface CartItem {
   quantity: number
   metal?: string
   diamondShape?: string
+  customizations?: {
+    metal?: string
+    carat?: number
+    color?: string
+    clarity?: string
+    cut?: string
+    certificate?: string
+  }
 }
 
 export default function Cart() {
@@ -136,10 +168,32 @@ export default function Cart() {
                           </svg>
                         </button>
                       </div>
-                      {item.metal && (
+                      {item.customizations && (
+                        <div className="text-sm text-gray-600 space-y-1 mt-2">
+                          {item.customizations.metal && (
+                            <p>Metal: {formatMetal(item.customizations.metal)}</p>
+                          )}
+                          {item.customizations.carat && (
+                            <p>Carat: {item.customizations.carat.toFixed(2)}ct</p>
+                          )}
+                          {item.customizations.color && (
+                            <p>Colour: {item.customizations.color}</p>
+                          )}
+                          {item.customizations.clarity && (
+                            <p>Clarity: {item.customizations.clarity}</p>
+                          )}
+                          {item.customizations.cut && (
+                            <p>Cut: {item.customizations.cut}</p>
+                          )}
+                          {item.customizations.certificate && (
+                            <p>Certificate: {formatCertificate(item.customizations.certificate)}</p>
+                          )}
+                        </div>
+                      )}
+                      {!item.customizations && item.metal && (
                         <p className="text-sm text-gray-600 mb-1">Metal: {item.metal}</p>
                       )}
-                      {item.diamondShape && (
+                      {!item.customizations && item.diamondShape && (
                         <p className="text-sm text-gray-600 mb-1">Diamond: {item.diamondShape}</p>
                       )}
                       <div className="flex items-center justify-between mt-4">

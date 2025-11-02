@@ -7,6 +7,30 @@ import { getCart, clearCart } from '@/lib/cart'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 
+// Helper function to format metal names
+const formatMetal = (metal: string): string => {
+  const metalMap: Record<string, string> = {
+    'platinum': 'Platinum',
+    '18k-white-gold': '18k White Gold',
+    '18k-yellow-gold': '18k Yellow Gold',
+    '18k-rose-gold': '18k Rose Gold',
+    '9k-white-gold': '9k White Gold',
+    '9k-yellow-gold': '9k Yellow Gold',
+    '9k-rose-gold': '9k Rose Gold',
+  }
+  return metalMap[metal] || metal
+}
+
+// Helper function to format certificate names
+const formatCertificate = (cert: string): string => {
+  const certMap: Record<string, string> = {
+    'jabour': 'Jabour Certificate',
+    'idgl': 'IDGL',
+    'igi': 'IGI',
+  }
+  return certMap[cert] || cert
+}
+
 interface CartItem {
   id: string
   name: string
@@ -14,6 +38,14 @@ interface CartItem {
   quantity: number
   metal?: string
   diamondShape?: string
+  customizations?: {
+    metal?: string
+    carat?: number
+    color?: string
+    clarity?: string
+    cut?: string
+    certificate?: string
+  }
 }
 
 export default function CheckoutPage() {
@@ -305,14 +337,40 @@ export default function CheckoutPage() {
                   {cart.map((item) => (
                     <div key={item.id} className="flex justify-between items-start border-b border-gray-200 pb-4">
                       <div className="flex-1">
-                        <p className="font-semibold text-primary-900">{item.name}</p>
-                        {item.metal && (
-                          <p className="text-sm text-gray-600">Metal: {item.metal}</p>
+                        <p className="font-semibold text-primary-900 mb-2">{item.name}</p>
+                        {item.customizations ? (
+                          <div className="text-sm text-gray-600 space-y-1">
+                            {item.customizations.metal && (
+                              <p>Metal: {formatMetal(item.customizations.metal)}</p>
+                            )}
+                            {item.customizations.carat && (
+                              <p>Carat: {item.customizations.carat.toFixed(2)}ct</p>
+                            )}
+                            {item.customizations.color && (
+                              <p>Colour: {item.customizations.color}</p>
+                            )}
+                            {item.customizations.clarity && (
+                              <p>Clarity: {item.customizations.clarity}</p>
+                            )}
+                            {item.customizations.cut && (
+                              <p>Cut: {item.customizations.cut}</p>
+                            )}
+                            {item.customizations.certificate && (
+                              <p>Certificate: {formatCertificate(item.customizations.certificate)}</p>
+                            )}
+                            <p className="mt-2">Quantity: {item.quantity}</p>
+                          </div>
+                        ) : (
+                          <>
+                            {item.metal && (
+                              <p className="text-sm text-gray-600">Metal: {item.metal}</p>
+                            )}
+                            {item.diamondShape && (
+                              <p className="text-sm text-gray-600">Shape: {item.diamondShape}</p>
+                            )}
+                            <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                          </>
                         )}
-                        {item.diamondShape && (
-                          <p className="text-sm text-gray-600">Shape: {item.diamondShape}</p>
-                        )}
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                       </div>
                       <p className="font-semibold text-primary-900 ml-4">
                         £{(item.price * item.quantity).toFixed(2)}

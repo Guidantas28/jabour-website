@@ -6,6 +6,14 @@ export interface CartItem {
   metal?: string
   diamondShape?: string
   image?: string
+  customizations?: {
+    metal?: string
+    carat?: number
+    color?: string
+    clarity?: string
+    cut?: string
+    certificate?: string
+  }
 }
 
 export function addToCart(item: Omit<CartItem, 'quantity'>) {
@@ -14,10 +22,23 @@ export function addToCart(item: Omit<CartItem, 'quantity'>) {
   const cart: CartItem[] = existingCart ? JSON.parse(existingCart) : []
   
   const existingItem = cart.find(
-    cartItem => 
-      cartItem.id === item.id &&
-      cartItem.metal === item.metal &&
-      cartItem.diamondShape === item.diamondShape
+    cartItem => {
+      // Check if items match by id and customizations
+      if (cartItem.id !== item.id) return false
+      
+      // If both have customizations, compare them
+      if (item.customizations && cartItem.customizations) {
+        return JSON.stringify(item.customizations) === JSON.stringify(cartItem.customizations)
+      }
+      
+      // If neither have customizations, compare by metal and diamondShape
+      if (!item.customizations && !cartItem.customizations) {
+        return cartItem.metal === item.metal && cartItem.diamondShape === item.diamondShape
+      }
+      
+      // If one has customizations and the other doesn't, they're different items
+      return false
+    }
   )
 
   if (existingItem) {

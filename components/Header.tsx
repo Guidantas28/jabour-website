@@ -19,6 +19,7 @@ export default function Header() {
     { name: 'EDUCATION', href: '/education' },
     { name: 'BLOG', href: '/blog' },
     { name: 'VIP CONSULTATION', href: '/vip-consultation' },
+    { name: 'WARRANTY', href: '/warranty-policy' },
     { name: 'CONTACT US', href: '/contact' },
   ]
 
@@ -40,8 +41,8 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <nav className="container-custom">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 w-full left-0 right-0">
+      <nav className="container-custom w-full">
         {/* Logo Section - Centered */}
         <div className="flex justify-center py-6 border-b border-gray-200">
           <Link href="/" className="relative h-16 w-auto">
@@ -152,7 +153,11 @@ export default function Header() {
                 )}
               </Link>
               {item.hasDropdown && activeDropdown === item.name && (
-                <div className="absolute top-full left-0 mt-2 z-50 max-w-screen-xl">
+                <div 
+                  className="absolute top-full left-0 mt-0 z-50 max-w-screen-xl"
+                  onMouseEnter={() => setActiveDropdown(item.name)}
+                  onMouseLeave={() => setActiveDropdown(null)}
+                >
                   {item.name === 'ENGAGEMENT RINGS' && <EngagementDropdown />}
                   {item.name === 'DIAMOND RINGS' && (
                     <div className="bg-white border border-gray-200 shadow-lg rounded-md py-2 w-48">
