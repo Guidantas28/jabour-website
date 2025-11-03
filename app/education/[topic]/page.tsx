@@ -13,61 +13,61 @@ const diamondShapes = [
     id: 'round',
     name: 'ROUND',
     description: 'The most popular choice of diamond, it has the most ideal proportions to maximise brilliance and sparkle.',
-    image: '/images/education/shapes/round.jpg',
+    image: '/images/diamonds/round.png',
   },
   {
     id: 'princess',
     name: 'PRINCESS',
     description: 'The Princess Cut Diamond is an elegant, modern and popular diamond shape.',
-    image: '/images/education/shapes/princess.jpg',
+    image: '/images/diamonds/princess.png',
   },
   {
     id: 'emerald',
     name: 'EMERALD',
     description: 'Echoing back to old-Hollywood, the rectangular facets truly show off the diamond\'s clarity.',
-    image: '/images/education/shapes/emerald.jpg',
+    image: '/images/diamonds/emerald.png',
   },
   {
     id: 'pear',
     name: 'PEAR',
     description: 'This is a great diamond to choose to elongate the finger whilst the light dances across this delicate and feminine diamond cut.',
-    image: '/images/education/shapes/pear.jpg',
+    image: '/images/diamonds/pear.png',
   },
   {
     id: 'oval',
     name: 'OVAL',
     description: 'The Oval Cut Diamond elongates the finger without losing its brilliance. A versatile and magnificent diamond choice!',
-    image: '/images/education/shapes/oval.jpg',
+    image: '/images/diamonds/oval.png',
   },
   {
     id: 'marquise',
     name: 'MARQUISE',
     description: 'If you\'re looking for a diamond shape to optimise the carat weight, then the Marquise Cut is your diamond of choice.',
-    image: '/images/education/shapes/marquise.jpg',
+    image: '/images/diamonds/marquise.png',
   },
   {
     id: 'asscher',
     name: 'ASSCHER',
     description: 'An exceptional diamond cut, reminiscent of the Art-Deco era.',
-    image: '/images/education/shapes/asscher.jpg',
+    image: '/images/diamonds/asscher.png',
   },
   {
     id: 'radiant',
     name: 'RADIANT',
     description: 'Encapsulating the best aspects of the Brilliant Cut, Emerald Cut and Princess Cut Diamond, the Radiant Cut Diamond has become a diamond in demand.',
-    image: '/images/education/shapes/radiant.jpg',
+    image: '/images/diamonds/radiant.png',
   },
   {
     id: 'cushion',
     name: 'CUSHION',
     description: 'This soft \'pillow shape\' diamond is a unique cut, allowing for a greater separation of white light into spectral colours.',
-    image: '/images/education/shapes/cushion.jpg',
+    image: '/images/diamonds/cushion.png',
   },
   {
     id: 'heart',
     name: 'HEART',
     description: 'A truly romantic diamond, what better way to show your love than with a Heart Cut Diamond?',
-    image: '/images/education/shapes/heart.jpg',
+    image: '/images/diamonds/heart.png',
   },
 ]
 
@@ -91,7 +91,7 @@ const colourGrades = [
     id: 'colourless',
     name: 'Colourless Diamond (D-F)',
     range: 'D-F',
-    image: '/images/education/colour/colourless.jpg',
+    image: '/images/colors/colourness_diamond.png',
     description: [
       'A Diamond in the colourless range, especially D-E, are considering the rarest diamonds as they display no colour at all.',
       'An F colour diamond will have the smallest undetectable colour; only really seen when the diamond is face down and usually only by a trained Gemologist.',
@@ -102,7 +102,7 @@ const colourGrades = [
     id: 'near-colourless',
     name: 'Near Colourless Diamond (G-J)',
     range: 'G-J',
-    image: '/images/education/colour/near-colourless.jpg',
+    image: '/images/colors/near_colourness.png',
     description: [
       'A diamond in the near-colourless range will still appear colourless when set into a diamond engagement ring.',
       'The colour will only be visible when viewed face down and compared directly to a diamond of a higher colour.',
@@ -113,7 +113,7 @@ const colourGrades = [
     id: 'faint-yellow',
     name: 'Faint Yellow - Light Yellow (K-Z)',
     range: 'K-Z',
-    image: '/images/education/colour/faint-yellow.jpg',
+    image: '/images/colors/faint_yellow.png',
     description: [
       'The diamonds in this grading will have a noticeable yellow tint to the diamond. Not to be confused with a Fancy Yellow Diamond, these diamonds will have more noticeable traces of nitrogen in the diamond, giving it the yellow tint.',
       'At Jabour & Co, we advise between a D-I Colour to ensure you can have the whitest diamond to your budget. However, should you prefer to choose a diamond with a lower colour then our Sales Team at Jabour & Co will be happy to source a Diamond for you.',
@@ -394,12 +394,14 @@ export default function TopicPage({ params }: TopicPageProps) {
                   key={shape.id}
                   className="bg-white rounded-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all hover:border-gold-500"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+                  <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden p-8">
                     <Image
                       src={shape.image}
                       alt={shape.name}
                       fill
-                      className="object-cover"
+                      className="object-contain"
+                      quality={95}
+                      sizes="(max-width: 768px) 50vw, 25vw"
                     />
                   </div>
                   <div className="p-6">
@@ -468,17 +470,62 @@ export default function TopicPage({ params }: TopicPageProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {caratData.map((item, idx) => (
-                        <tr key={item.shape} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="p-4 font-serif font-normal text-primary-900">{item.shape}</td>
-                          {item.sizes.map((size, sizeIdx) => (
-                            <td key={sizeIdx} className="p-4 text-center text-gray-700 font-light text-sm">
-                              {size}
+                      {caratData.map((item, idx) => {
+                        // Map shape names to carat image file names
+                        const shapeToCaratImage: Record<string, string> = {
+                          'Round': 'round-carat.png',
+                          'Princess': 'princes-carat.png',
+                          'Emerald': 'emerald-carat.png',
+                          'Pear': 'pear-carat.png',
+                          'Oval': 'oval-carat.png',
+                          'Marquise': 'marquise-carat.png',
+                          'Asscher': 'asscher-carat.png',
+                          'Radiant': 'radiant-carat.png',
+                          'Cushion': 'cushion-carat.png',
+                          'Heart': 'heart-carat.png',
+                        }
+                        const caratImageName = shapeToCaratImage[item.shape] || `${item.shape.toLowerCase()}-carat.png`
+                        const isLastRow = idx === caratData.length - 1
+                        
+                        return (
+                          <tr key={item.shape} className={`${!isLastRow ? 'border-b border-gray-200' : ''} ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-[26px] h-[26px] flex-shrink-0">
+                                  <Image
+                                    src={`/images/carat/${caratImageName}`}
+                                    alt={item.shape}
+                                    fill
+                                    className="object-contain"
+                                    quality={95}
+                                    sizes="26px"
+                                  />
+                                </div>
+                                <span className="font-serif font-normal text-primary-900">{item.shape}</span>
+                              </div>
                             </td>
-                          ))}
-                          <td className="p-4 font-serif font-normal text-primary-900">{item.shape}</td>
-                        </tr>
-                      ))}
+                            {item.sizes.map((size, sizeIdx) => (
+                              <td key={sizeIdx} className="p-4 text-center text-gray-700 font-light text-sm">
+                                {size}
+                              </td>
+                            ))}
+                            <td className="p-4">
+                              <div className="flex items-center justify-center">
+                                <div className="relative w-[26px] h-[26px]">
+                                  <Image
+                                    src={`/images/carat/${caratImageName}`}
+                                    alt={item.shape}
+                                    fill
+                                    className="object-contain"
+                                    quality={95}
+                                    sizes="26px"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -508,13 +555,17 @@ export default function TopicPage({ params }: TopicPageProps) {
                     key={grade.id}
                     className="bg-primary-900 text-white rounded-sm overflow-hidden"
                   >
-                    <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden">
-                      <Image
-                        src={grade.image}
-                        alt={grade.name}
-                        fill
-                        className="object-cover opacity-90"
-                      />
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden flex items-center justify-center py-8">
+                      <div className="relative w-[200px] h-[200px]">
+                        <Image
+                          src={grade.image}
+                          alt={grade.name}
+                          fill
+                          className="object-contain"
+                          quality={95}
+                          sizes="200px"
+                        />
+                      </div>
                     </div>
                     <div className="p-8">
                       <h3 className="text-2xl font-serif font-normal mb-4 text-white">

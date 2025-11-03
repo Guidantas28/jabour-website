@@ -8,7 +8,8 @@ import {
   FaCertificate, 
   FaShieldAlt, 
   FaRulerCombined, 
-  FaUndo 
+  FaUndo,
+  FaGem
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -217,55 +218,133 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Explore The Range Section */}
       <section className="section-padding bg-white">
-        <div className="container-custom">
-          <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12 scroll-fade-in">
-            Shop by Category
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="container-custom max-w-7xl mx-auto">
+          <div className="text-center mb-16 scroll-fade-in">
+            <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-6 tracking-wide">
+              EXPLORE THE RANGE
+            </h2>
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="h-px bg-gray-300 flex-1 max-w-32"></div>
+              <FaGem className="text-gold-500 text-xl" />
+              <div className="h-px bg-gray-300 flex-1 max-w-32"></div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8">
+            {/* Engagement Rings */}
             <Link
               href="/engagement-rings"
-              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-scale-in group flex flex-col"
             >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
-                  Engagement Rings
-                </h3>
+              <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src="/images/rings/engajament_ring.jpg"
+                  alt="Engagement Rings"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  quality={90}
+                />
               </div>
+              <h3 className="text-lg font-serif font-normal text-primary-900 mb-2 text-center uppercase tracking-wide">
+                ENGAGEMENT RINGS
+              </h3>
+              <p className="text-primary-900 font-light text-center">
+                From £299
+              </p>
             </Link>
-            <Link
-              href="/wedding-rings"
-              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
-              style={{ transitionDelay: '0.15s' }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
-                  Wedding Rings
-                </h3>
-              </div>
-            </Link>
+
+            {/* Diamond Rings */}
             <Link
               href="/diamonds"
-              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
+              className="scroll-scale-in group flex flex-col"
+              style={{ transitionDelay: '0.1s' }}
+            >
+              <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src="/images/rings/diamond_ring.jpg"
+                  alt="Diamond Rings"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  quality={90}
+                />
+              </div>
+              <h3 className="text-lg font-serif font-normal text-primary-900 mb-2 text-center uppercase tracking-wide">
+                DIAMOND RINGS
+              </h3>
+              <p className="text-primary-900 font-light text-center">
+                From £299
+              </p>
+            </Link>
+
+            {/* Wedding Rings */}
+            <Link
+              href="/wedding-rings"
+              className="scroll-scale-in group flex flex-col"
+              style={{ transitionDelay: '0.2s' }}
+            >
+              <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src="/images/rings/weeding_rings.png"
+                  alt="Wedding Rings"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  quality={90}
+                />
+              </div>
+              <h3 className="text-lg font-serif font-normal text-primary-900 mb-2 text-center uppercase tracking-wide">
+                WEDDING RINGS
+              </h3>
+              <p className="text-primary-900 font-light text-center">
+                From £199
+              </p>
+            </Link>
+
+            {/* Eternity Rings */}
+            <Link
+              href="/eternity-rings"
+              className="scroll-scale-in group flex flex-col"
               style={{ transitionDelay: '0.3s' }}
             >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
-                  Lab Grown Diamonds
-                </h3>
+              <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src="/images/rings/eternity_rings.jpg"
+                  alt="Eternity Rings"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  quality={90}
+                />
               </div>
+              <h3 className="text-lg font-serif font-normal text-primary-900 mb-2 text-center uppercase tracking-wide">
+                ETERNITY RINGS
+              </h3>
+              <p className="text-primary-900 font-light text-center">
+                From £299
+              </p>
             </Link>
+
+            {/* Earrings */}
             <Link
-              href="/jewellery"
-              className="scroll-fade-in group relative h-64 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow"
-              style={{ transitionDelay: '0.45s' }}
+              href="/jewellery/earrings"
+              className="scroll-scale-in group flex flex-col"
+              style={{ transitionDelay: '0.4s' }}
             >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-2xl font-serif font-bold text-primary-900 group-hover:scale-110 transition-transform">
-                  Jewellery
-                </h3>
+              <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
+                <Image
+                  src="/images/rings/earrings.jpg"
+                  alt="Earrings"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  quality={90}
+                />
               </div>
+              <h3 className="text-lg font-serif font-normal text-primary-900 mb-2 text-center uppercase tracking-wide">
+                EARRINGS
+              </h3>
+              <p className="text-primary-900 font-light text-center">
+                From £199
+              </p>
             </Link>
           </div>
         </div>
