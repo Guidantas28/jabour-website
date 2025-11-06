@@ -148,21 +148,15 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     }
     
     if (params.color && params.color.length > 0) {
-      filters.color = Array.isArray(params.color) 
-        ? params.color.map(c => c.toUpperCase())
-        : [params.color.toUpperCase()]
+      filters.color = params.color.map(c => c.toUpperCase())
     }
     
     if (params.clarity && params.clarity.length > 0) {
-      filters.clarity = Array.isArray(params.clarity)
-        ? params.clarity.map(c => c.toUpperCase())
-        : [params.clarity.toUpperCase()]
+      filters.clarity = params.clarity.map(c => c.toUpperCase())
     }
     
     if (params.cut && params.cut.length > 0) {
-      filters.cut = Array.isArray(params.cut)
-        ? params.cut.map(c => c.toUpperCase())
-        : [params.cut.toUpperCase()]
+      filters.cut = params.cut.map(c => c.toUpperCase())
     }
     
     if (params.minPrice || params.maxPrice) {

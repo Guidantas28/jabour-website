@@ -42,6 +42,16 @@ interface CartItem {
     clarity?: string
     cut?: string
     certificate?: string
+    bandStyle?: string
+    ringSize?: string
+    shape?: string
+    diamond?: {
+      carat?: number
+      color?: string
+      clarity?: string
+      cut?: string
+      lab?: string
+    }
   }
 }
 
