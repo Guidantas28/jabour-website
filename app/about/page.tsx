@@ -152,10 +152,13 @@ export default function AboutPage() {
             </div>
             <div className="relative h-[600px] rounded-sm overflow-hidden shadow-xl">
               <Image
-                src="/images/about/responsible.png"
+                src="/images/about/responsible.jpeg"
                 alt="Responsible Diamond Sourcing"
                 fill
                 className="object-cover"
+                quality={100}
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
           </div>

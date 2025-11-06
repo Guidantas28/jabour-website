@@ -173,19 +173,49 @@ export default function Cart() {
                           {item.customizations.metal && (
                             <p>Metal: {formatMetal(item.customizations.metal)}</p>
                           )}
-                          {item.customizations.carat && (
+                          {item.customizations.bandStyle && (
+                            <p>Band Style: {item.customizations.bandStyle}</p>
+                          )}
+                          {item.customizations.ringSize && (
+                            <p>Ring Size: {item.customizations.ringSize}</p>
+                          )}
+                          {item.customizations.shape && (
+                            <p>Diamond Shape: {item.customizations.shape}</p>
+                          )}
+                          {/* Diamond information from Nivoda */}
+                          {item.customizations.diamond && (
+                            <>
+                              {item.customizations.diamond.carat && (
+                                <p>Diamond Carat: {item.customizations.diamond.carat.toFixed(2)}ct</p>
+                              )}
+                              {item.customizations.diamond.color && (
+                                <p>Diamond Colour: {item.customizations.diamond.color}</p>
+                              )}
+                              {item.customizations.diamond.clarity && (
+                                <p>Diamond Clarity: {item.customizations.diamond.clarity}</p>
+                              )}
+                              {item.customizations.diamond.cut && (
+                                <p>Diamond Cut: {item.customizations.diamond.cut}</p>
+                              )}
+                              {item.customizations.diamond.lab && (
+                                <p>Diamond Certificate: {item.customizations.diamond.lab}</p>
+                              )}
+                            </>
+                          )}
+                          {/* Fallback for old format */}
+                          {!item.customizations.diamond && item.customizations.carat && (
                             <p>Carat: {item.customizations.carat.toFixed(2)}ct</p>
                           )}
-                          {item.customizations.color && (
+                          {!item.customizations.diamond && item.customizations.color && (
                             <p>Colour: {item.customizations.color}</p>
                           )}
-                          {item.customizations.clarity && (
+                          {!item.customizations.diamond && item.customizations.clarity && (
                             <p>Clarity: {item.customizations.clarity}</p>
                           )}
-                          {item.customizations.cut && (
+                          {!item.customizations.diamond && item.customizations.cut && (
                             <p>Cut: {item.customizations.cut}</p>
                           )}
-                          {item.customizations.certificate && (
+                          {!item.customizations.diamond && item.customizations.certificate && (
                             <p>Certificate: {formatCertificate(item.customizations.certificate)}</p>
                           )}
                         </div>

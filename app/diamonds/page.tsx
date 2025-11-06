@@ -59,7 +59,7 @@ export default function DiamondsPage() {
               offer excellent value and are more sustainable, while natural diamonds have a unique history
               spanning millions of years.
             </p>
-            <Link href="/diamonds/guide" className="text-primary-800 font-semibold hover:underline">
+            <Link href="/education/lab-grown-diamonds" className="text-primary-800 font-semibold hover:underline">
               Learn more in our diamond guide →
             </Link>
           </div>

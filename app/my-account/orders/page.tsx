@@ -25,9 +25,12 @@ export default function MyOrdersPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) {
+      if (!user || !user.id) {
         router.push('/my-account')
-      } else {
+        return
+      }
+      // Only fetch orders if user is authenticated
+      if (user && user.id) {
         fetchOrders()
       }
     }
@@ -35,16 +38,24 @@ export default function MyOrdersPage() {
 
   const fetchOrders = async () => {
     try {
+      // Don't fetch orders if user is not authenticated
+      if (!user || !user.id) {
+        setOrders([])
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       setOrders(data || [])
     } catch (error) {
       console.error('Error fetching orders:', error)
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -107,9 +118,10 @@ export default function MyOrdersPage() {
             ) : (
               <div className="space-y-4">
                 {orders.map((order) => (
-                  <div
+                  <Link
                     key={order.id}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                    href={`/my-account/orders/${order.id}`}
+                    className="block border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -158,7 +170,7 @@ export default function MyOrdersPage() {
                         ))}
                       </ul>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

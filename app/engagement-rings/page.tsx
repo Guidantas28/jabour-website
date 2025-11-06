@@ -99,7 +99,25 @@ function EngagementRingsContent() {
         // Apply filters to static data
         let staticRings: any[] = [
           {
-            id: 'marquise-solitaire',
+            id: 'portman',
+            name: 'Portman Engagement Ring',
+            price: 'From £1,200',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/portman/portman-round.avif',
+            diamond_shapes: ['Round', 'Oval'],
+            style: 'solitaire',
+          },
+          {
+            id: 'bardot',
+            name: 'Bardot Engagement Ring',
+            price: 'From £995',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/bardot/bardot-round-platinum2.avif',
+            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
+            style: 'solitaire',
+          },
+          {
+            id: 'marquise-trilogy',
             name: 'Marquise Solitaire',
             price: 'From £1,200',
             metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
@@ -166,10 +184,28 @@ function EngagementRingsContent() {
       }
     } catch (error) {
       console.error('Error fetching products:', error)
-      // Fallback to static data on error - only real product
+      // Fallback to static data on error - show all 3 products
       setRings([
         {
-          id: 'marquise-solitaire',
+          id: 'portman',
+          name: 'Portman Engagement Ring',
+          price: 'From £1,200',
+          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+          image: '/images/rings/portman/portman-round.avif',
+          diamond_shapes: ['Round', 'Oval'],
+          style: 'solitaire',
+        },
+        {
+          id: 'bardot',
+          name: 'Bardot Engagement Ring',
+          price: 'From £995',
+          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+          image: '/images/rings/bardot/bardot-round-platinum1.avif',
+          diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
+          style: 'solitaire',
+        },
+        {
+          id: 'marquise-trilogy',
           name: 'Marquise Solitaire',
           price: 'From £1,200',
           metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
@@ -278,18 +314,28 @@ function EngagementRingsContent() {
               {rings.map((ring) => (
               <Link
                 key={ring.id}
-                href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
+                href={ring.id === 'marquise-trilogy' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
                 className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
               >
                 <div className="h-80 bg-gray-100 relative overflow-hidden">
-                  {ring.image && (ring.image.includes('supabase.co') || ring.image.startsWith('http')) ? (
-                    <Image
-                      src={ring.image}
-                      alt={ring.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      unoptimized={ring.image.includes('supabase.co')}
-                    />
+                  {ring.image ? (
+                    ring.image.endsWith('.avif') ? (
+                      <img
+                        src={ring.image}
+                        alt={ring.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <Image
+                        src={ring.image}
+                        alt={ring.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                        quality={100}
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        unoptimized={ring.image.includes('supabase.co')}
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
                       <div className="w-32 h-32 border-4 border-primary-800 rounded-full group-hover:scale-110 transition-transform"></div>

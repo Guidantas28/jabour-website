@@ -68,10 +68,73 @@ export default function Home() {
         .limit(4)
 
       if (products && products.length > 0) {
+        // Check if Portman is already in the list
+        const hasPortman = products.some((p: any) => p.id === 'portman')
+        if (!hasPortman) {
+          // Add Portman to the list
+          products.push({
+            id: 'portman',
+            name: 'Portman Engagement Ring',
+            price: 'From £995',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/portman/portman-round.avif',
+            diamond_shapes: ['Round', 'Oval'],
+            style: 'solitaire',
+          })
+        }
+        // Check if Bardot is already in the list
+        const hasBardot = products.some((p: any) => p.id === 'bardot')
+        if (!hasBardot) {
+          // Add Bardot to the list
+          products.push({
+            id: 'bardot',
+            name: 'Bardot Engagement Ring',
+            price: 'From £995',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/bardot/bardot-round-platinum2.avif',
+            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
+            style: 'solitaire',
+          })
+        }
         setRings(products)
       } else {
-        // Fallback to Marquise Solitaire
-        setRings([{
+        // Fallback to Marquise Solitaire, Portman, and Bardot
+        setRings([
+          {
+            id: 'marquise-solitaire',
+            name: 'Marquise Solitaire',
+            price: 'From £1,200',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
+            diamond_shapes: ['Marquise'],
+            style: 'solitaire',
+          },
+          {
+            id: 'portman',
+            name: 'Portman Engagement Ring',
+            price: 'From £995',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/portman/portman-round.avif',
+            diamond_shapes: ['Round', 'Oval'],
+            style: 'solitaire',
+          },
+          {
+            id: 'bardot',
+            name: 'Bardot Engagement Ring',
+            price: 'From £995',
+            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+            image: '/images/rings/bardot/bardot-round-platinum2.avif',
+            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
+            style: 'solitaire',
+          }
+        ])
+      }
+      setLoading(false)
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      // Fallback to Marquise Solitaire, Portman, and Bardot on error
+      setRings([
+        {
           id: 'marquise-solitaire',
           name: 'Marquise Solitaire',
           price: 'From £1,200',
@@ -79,21 +142,26 @@ export default function Home() {
           image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
           diamond_shapes: ['Marquise'],
           style: 'solitaire',
-        }])
-      }
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching products:', error)
-      // Fallback to Marquise Solitaire on error
-      setRings([{
-        id: 'marquise-solitaire',
-        name: 'Marquise Solitaire',
-        price: 'From £1,200',
-        metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-        image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
-        diamond_shapes: ['Marquise'],
-        style: 'solitaire',
-      }])
+        },
+        {
+          id: 'portman',
+          name: 'Portman Engagement Ring',
+          price: 'From £995',
+          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/portman/portman_1.jpg',
+          diamond_shapes: ['Round', 'Oval'],
+          style: 'solitaire',
+        },
+        {
+          id: 'bardot',
+          name: 'Bardot Engagement Ring',
+          price: 'From £995',
+          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
+          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/bardot/bardot_1.jpg',
+          diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
+          style: 'solitaire',
+        }
+      ])
       setLoading(false)
     }
   }
@@ -195,7 +263,7 @@ export default function Home() {
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 2
               </div>
-              <h3 className="text-xl font-semibold mb-2">Book your free appointment</h3>
+              <h3 className="text-xl font-semibold mb-2">Book your appointment</h3>
               <p className="text-gray-600">
                 Our experts are on hand to guide you through the options.
               </p>
@@ -286,7 +354,7 @@ export default function Home() {
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
-                  src="/images/rings/weeding_rings.png"
+                  src="/images/rings/weeding_rings.jpg"
                   alt="Wedding Rings"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -369,7 +437,7 @@ export default function Home() {
               {rings.map((ring, index) => (
                 <Link
                   key={ring.id}
-                  href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
+                  href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : ring.id === 'portman' ? '/engagement-rings/portman' : ring.id === 'bardot' ? '/engagement-rings/bardot' : `/engagement-rings/${ring.id}`}
                   className="scroll-scale-in group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                   style={{ transitionDelay: `${index * 0.1}s` }}
                 >
