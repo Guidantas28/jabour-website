@@ -51,7 +51,6 @@ export default function EditBlogPostPage() {
         tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
       })
     } catch (error) {
-      console.error('Error fetching post:', error)
     } finally {
       setLoading(false)
     }
@@ -82,7 +81,6 @@ export default function EditBlogPostPage() {
 
       router.push('/admin/blog')
     } catch (error) {
-      console.error('Error updating post:', error)
       alert('Error updating post')
     } finally {
       setSaving(false)

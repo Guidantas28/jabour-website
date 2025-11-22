@@ -81,11 +81,30 @@ export default function EducationPage() {
               >
                 <div className="aspect-square p-8 flex flex-col items-center justify-center">
                   {/* Image placeholder or icon */}
-                  <div className="w-full h-48 mb-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-sm flex items-center justify-center">
-                    {topic.icon || (
-                      <div className="text-6xl text-gray-300">
-                        <FaGem />
+                  <div className="w-full h-48 mb-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-sm flex items-center justify-center relative overflow-hidden">
+                    {topic.id === 'certificates' ? (
+                      // Custom GIA Certificate Visual
+                      <div className="flex flex-col items-center justify-center w-full h-full">
+                        {/* GIA Certificate Badge */}
+                        <div className="bg-white border-2 border-gold-500 rounded-sm p-4 shadow-lg transform group-hover:scale-105 transition-transform">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-primary-900 mb-1" style={{ fontFamily: 'serif' }}>
+                              GIA
+                            </div>
+                            <div className="text-xs text-gray-600 uppercase tracking-wider font-light">
+                              Certificate
+                            </div>
+                          </div>
+                        </div>
+                        {/* Small certificate icon overlay */}
+                        <FaCertificate className="absolute bottom-2 right-2 text-gold-500 opacity-20 text-2xl" />
                       </div>
+                    ) : (
+                      topic.icon || (
+                        <div className="text-6xl text-gray-300">
+                          <FaGem />
+                        </div>
+                      )
                     )}
                   </div>
                   <h3 className="text-xl font-serif font-normal text-primary-900 text-center group-hover:text-gold-500 transition-colors">

@@ -30,7 +30,6 @@ export default function OrderDetailPage() {
       if (error) throw error
       setOrder(data)
     } catch (error) {
-      console.error('Error fetching order:', error)
       alert('Error loading order')
     } finally {
       setLoading(false)
@@ -47,7 +46,6 @@ export default function OrderDetailPage() {
       if (error) throw error
       fetchOrder()
     } catch (error) {
-      console.error('Error updating order:', error)
       alert('Error updating order')
     }
   }
@@ -144,23 +142,73 @@ export default function OrderDetailPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-primary-900 mb-4">Order Items</h2>
             <div className="space-y-4">
-              {Array.isArray(order.items) && order.items.map((item: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-start border-b border-gray-200 pb-4">
-                  <div className="flex-1">
-                    <p className="font-semibold text-primary-900">{item.name}</p>
-                    {item.metal && (
-                      <p className="text-sm text-gray-600">Metal: {item.metal}</p>
+              {Array.isArray(order.items) && order.items.map((item: any, idx: number) => {
+                const diamond = item.customizations?.diamond
+                const hasDiamond = diamond && diamond.id
+                
+                return (
+                  <div key={idx} className="border-b border-gray-200 pb-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-primary-900">{item.name}</p>
+                        {item.metal && (
+                          <p className="text-sm text-gray-600">Metal: {item.metal}</p>
+                        )}
+                        {item.diamondShape && (
+                          <p className="text-sm text-gray-600">Shape: {item.diamondShape}</p>
+                        )}
+                        <p className="text-sm text-gray-600">Quantity: {item.quantity || 1}</p>
+                      </div>
+                      <p className="font-semibold text-primary-900">
+                        £{(item.price * (item.quantity || 1)).toFixed(2)}
+                      </p>
+                    </div>
+                    
+                    {hasDiamond && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <h3 className="text-lg font-semibold text-primary-900 mb-3">Diamond Information</h3>
+                        <div className="grid md:grid-cols-2 gap-3 text-sm">
+                          {diamond.carat && (
+                            <p><strong>Carat:</strong> {diamond.carat.toFixed(2)}ct</p>
+                          )}
+                          {diamond.color && (
+                            <p><strong>Color:</strong> {diamond.color}</p>
+                          )}
+                          {diamond.clarity && (
+                            <p><strong>Clarity:</strong> {diamond.clarity}</p>
+                          )}
+                          {diamond.cut && (
+                            <p><strong>Cut:</strong> {diamond.cut}</p>
+                          )}
+                          {diamond.lab && (
+                            <p><strong>Certificate:</strong> {diamond.lab}</p>
+                          )}
+                          {diamond.id && (
+                            <p className="md:col-span-2">
+                              <strong>Diamond ID:</strong> <span className="font-mono text-xs">{diamond.id}</span>
+                            </p>
+                          )}
+                        </div>
+                        {diamond.id && (
+                          <div className="mt-4">
+                            <a
+                              href={`https://app.nivoda.com/diamonds/${diamond.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 bg-primary-900 hover:bg-primary-800 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              View Diamond on Nivoda
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {item.diamondShape && (
-                      <p className="text-sm text-gray-600">Shape: {item.diamondShape}</p>
-                    )}
-                    <p className="text-sm text-gray-600">Quantity: {item.quantity || 1}</p>
                   </div>
-                  <p className="font-semibold text-primary-900">
-                    £{(item.price * (item.quantity || 1)).toFixed(2)}
-                  </p>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">

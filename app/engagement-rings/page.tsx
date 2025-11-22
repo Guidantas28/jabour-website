@@ -4,7 +4,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 function EngagementRingsContent() {
   const searchParams = useSearchParams()
@@ -13,6 +12,12 @@ function EngagementRingsContent() {
   const [selectedStyle, setSelectedStyle] = useState('')
   const [selectedMetal, setSelectedMetal] = useState('')
   const [selectedShape, setSelectedShape] = useState('')
+  const [recommending, setRecommending] = useState(false)
+  const [recommendation, setRecommendation] = useState<{
+    shape: string
+    shapeName: string
+    explanation: string
+  } | null>(null)
 
   useEffect(() => {
     // Read query parameters from URL
@@ -31,43 +36,99 @@ function EngagementRingsContent() {
 
   const fetchProducts = async (style: string, metal: string, shape: string, category: string, stone: string) => {
     try {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('category', 'engagement-rings')
-        .order('created_at', { ascending: false })
-
-      // Apply filters if they exist
-      // Note: This assumes the database has these columns or we filter in memory
+      // Fetch products from API
+      const response = await fetch(`/api/products?category=engagement-rings`)
       
-      const { data: products } = await query
+      if (!response.ok) {
+        throw new Error('Failed to fetch products')
+      }
+      
+      const data = await response.json()
+      const products = data.products || []
 
-      // Filter products in memory based on query parameters
-      let filteredProducts = products || []
+      console.log(`Received ${products.length} products from API`)
 
+      // Filter out products without slugs - CRITICAL: We need slugs for routing
+      // Also ensure we only have unique products by slug
+      const slugMap = new Map<string, any>()
+      products.forEach((p: any) => {
+        if (!p.slug) {
+          return
+        }
+        if (slugMap.has(p.slug)) {
+          return
+        }
+        slugMap.set(p.slug, p)
+      })
+      
+      const validProducts = Array.from(slugMap.values())
+      console.log(`After deduplication: ${validProducts.length} unique products by slug`)
+
+      // Process products to extract metals and shapes from configurations
+      let processedProducts = validProducts.map((p: any) => {
+        // Get metals from product_configurations
+        const metals = p.product_configurations
+          ?.filter((c: any) => c.configuration_type === 'metal' && c.active)
+          .sort((a: any, b: any) => {
+            // Prioritize 18k metals first
+            const aIs18k = a.configuration_value?.includes('18k') || a.display_name?.includes('18k')
+            const bIs18k = b.configuration_value?.includes('18k') || b.display_name?.includes('18k')
+            
+            if (aIs18k && !bIs18k) return -1
+            if (!aIs18k && bIs18k) return 1
+            
+            // If both are same type (both 18k or both 9k), sort by display_order
+            return a.display_order - b.display_order
+          })
+          .map((c: any) => c.display_name) || []
+
+        // Get shapes from product_configurations
+        const shapes = p.product_configurations
+          ?.filter((c: any) => c.configuration_type === 'shape' && c.active)
+          .map((c: any) => c.display_name) || []
+
+        // Format price
+        const price = p.base_price 
+          ? `From £${p.base_price.toLocaleString()}` 
+          : 'Price on request'
+
+        // CRITICAL: Always use slug, never ID for routing
+        const slug = p.slug // Never fallback to ID
+        if (!slug) {
+        }
+
+        return {
+          id: slug, // Use slug for routing (this becomes the URL)
+          slug: slug, // Also keep slug explicitly
+          name: p.name,
+          price,
+          metals,
+          shapes,
+          image: p.featured_image_url,
+          product: p, // Keep full product for filtering
+        }
+      })
+
+      // Apply filters
       if (style) {
-        // Filter by style - assuming style is in the product name or a style field
-        filteredProducts = filteredProducts.filter((p: any) => {
+        processedProducts = processedProducts.filter((p: any) => {
           const name = (p.name || '').toLowerCase()
           const styleLower = style.toLowerCase()
-          return name.includes(styleLower) || (p.style && p.style.toLowerCase() === styleLower)
+          return name.includes(styleLower)
         })
       }
 
       if (metal) {
-        // Filter by metal
-        filteredProducts = filteredProducts.filter((p: any) => {
-          const metals = Array.isArray(p.metals) ? p.metals : []
-          const metalMap: Record<string, string> = {
-            'platinum': 'Platinum',
-            'white-gold': '18k White Gold',
-            'yellow-gold': '18k Yellow Gold',
-            'rose-gold': '18k Rose Gold',
-            'silver': 'Silver',
-            'mixed-metal': 'Mixed Metal'
-          }
-          const metalName = metalMap[metal] || metal
-          return metals.some((m: string) => 
+        const metalMap: Record<string, string> = {
+          'platinum': 'Platinum',
+          'white-gold': 'White Gold',
+          'yellow-gold': 'Yellow Gold',
+          'rose-gold': 'Rose Gold',
+          'silver': 'Silver',
+        }
+        const metalName = metalMap[metal] || metal
+        processedProducts = processedProducts.filter((p: any) => {
+          return p.metals.some((m: string) => 
             m.toLowerCase().includes(metalName.toLowerCase()) ||
             metalName.toLowerCase().includes(m.toLowerCase())
           )
@@ -75,145 +136,50 @@ function EngagementRingsContent() {
       }
 
       if (shape) {
-        // Filter by diamond shape
-        filteredProducts = filteredProducts.filter((p: any) => {
-          const shapes = Array.isArray(p.diamond_shapes) ? p.diamond_shapes : []
-          const name = (p.name || '').toLowerCase()
-          // Check if shape is in the diamond_shapes array or in the product name
-          return shapes.some((s: string) => 
+        processedProducts = processedProducts.filter((p: any) => {
+          return p.shapes.some((s: string) => 
             s.toLowerCase() === shape.toLowerCase()
-          ) || name.includes(shape.toLowerCase())
+          ) || p.name.toLowerCase().includes(shape.toLowerCase())
         })
       }
 
       if (category) {
-        // Filter by category (womens, mens, bespoke, gemstone)
-        filteredProducts = filteredProducts.filter((p: any) => {
-          const pCategory = (p.subcategory || '').toLowerCase()
+        processedProducts = processedProducts.filter((p: any) => {
+          const pCategory = (p.product?.subcategory || '').toLowerCase()
           return pCategory === category.toLowerCase()
         })
       }
 
-      // If no products from database, use static data
-      if (filteredProducts.length === 0 && (!products || products.length === 0)) {
-        // Apply filters to static data
-        let staticRings: any[] = [
-          {
-            id: 'portman',
-            name: 'Portman Engagement Ring',
-            price: 'From £1,200',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/portman/portman-round.avif',
-            diamond_shapes: ['Round', 'Oval'],
-            style: 'solitaire',
-          },
-          {
-            id: 'bardot',
-            name: 'Bardot Engagement Ring',
-            price: 'From £995',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/bardot/bardot-round-platinum2.avif',
-            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
-            style: 'solitaire',
-          },
-          {
-            id: 'marquise-trilogy',
-            name: 'Marquise Solitaire',
-            price: 'From £1,200',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
-            diamond_shapes: ['Marquise'],
-            style: 'solitaire',
-          },
-        ]
-
-        // Apply shape filter to static data if needed
-        if (shape) {
-          staticRings = staticRings.filter((ring) => {
-            const shapes = Array.isArray(ring.diamond_shapes) ? ring.diamond_shapes : []
-            const name = (ring.name || '').toLowerCase()
-            return shapes.some((s: string) => 
-              s.toLowerCase() === shape.toLowerCase()
-            ) || name.includes(shape.toLowerCase())
-          })
+      // Remove duplicates by slug - CRITICAL: Use slug as unique identifier
+      const uniqueProductsMap = new Map<string, any>()
+      processedProducts.forEach((p: any) => {
+        if (p.slug && !uniqueProductsMap.has(p.slug)) {
+          uniqueProductsMap.set(p.slug, p)
+        } else if (p.slug && uniqueProductsMap.has(p.slug)) {
         }
+      })
+      const uniqueProducts = Array.from(uniqueProductsMap.values())
 
-        // Apply style filter to static data if needed
-        if (style) {
-          staticRings = staticRings.filter((ring) => {
-            const ringStyle = (ring.style || '').toLowerCase()
-            return ringStyle === style.toLowerCase()
-          })
+      const ringsToSet = uniqueProducts.map((p: any) => {
+        // CRITICAL: Always use slug, never ID
+        const slug = p.slug
+        if (!slug) {
+          return null
         }
-
-        // Apply metal filter to static data if needed
-        if (metal) {
-          const metalMap: Record<string, string> = {
-            'platinum': 'Platinum',
-            'white-gold': 'White Gold',
-            'yellow-gold': 'Yellow Gold',
-            'rose-gold': 'Rose Gold',
-            'silver': 'Silver',
-            'mixed-metal': 'Mixed Metal'
-          }
-          const metalName = metalMap[metal] || metal
-          staticRings = staticRings.filter((ring) => {
-            const metals = Array.isArray(ring.metals) ? ring.metals : []
-            return metals.some((m: string) => 
-              m.toLowerCase().includes(metalName.toLowerCase()) ||
-              metalName.toLowerCase().includes(m.toLowerCase())
-            )
-          })
-        }
-
-        setRings(staticRings.map((ring) => ({
-          id: ring.id,
-          name: ring.name,
-          price: ring.price,
-          metals: Array.isArray(ring.metals) ? ring.metals : [],
-          image: ring.image,
-        })))
-      } else if (filteredProducts.length > 0) {
-        setRings(filteredProducts.map((p: any) => ({
-          id: p.slug,
+        return {
+          id: slug, // Use slug as id for React key
+          slug: slug, // Explicitly store slug for href
           name: p.name,
           price: p.price,
-          metals: Array.isArray(p.metals) ? p.metals : [],
-          image: p.featured_image_url,
-        })))
-      }
+          metals: p.metals,
+          image: p.image,
+        }
+      }).filter(Boolean) // Remove any null entries
+      
+      setRings(ringsToSet)
     } catch (error) {
-      console.error('Error fetching products:', error)
-      // Fallback to static data on error - show all 3 products
-      setRings([
-        {
-          id: 'portman',
-          name: 'Portman Engagement Ring',
-          price: 'From £1,200',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: '/images/rings/portman/portman-round.avif',
-          diamond_shapes: ['Round', 'Oval'],
-          style: 'solitaire',
-        },
-        {
-          id: 'bardot',
-          name: 'Bardot Engagement Ring',
-          price: 'From £995',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: '/images/rings/bardot/bardot-round-platinum1.avif',
-          diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
-          style: 'solitaire',
-        },
-        {
-          id: 'marquise-trilogy',
-          name: 'Marquise Solitaire',
-          price: 'From £1,200',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
-          diamond_shapes: ['Marquise'],
-          style: 'solitaire',
-        },
-      ])
+      // Show empty state instead of fallback data
+      setRings([])
     } finally {
       setLoading(false)
     }
@@ -230,6 +196,45 @@ function EngagementRingsContent() {
 
     // Navigate with new params
     window.location.href = `/engagement-rings?${params.toString()}`
+  }
+
+  const handleRandomRecommendation = async () => {
+    setRecommending(true)
+    setRecommendation(null)
+    
+    try {
+      const response = await fetch('/api/recommend-diamond-shape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          preferences: {
+            style: selectedStyle,
+            metal: selectedMetal,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get recommendation')
+      }
+
+      const data = await response.json()
+      setRecommendation({
+        shape: data.shape,
+        shapeName: data.shapeName,
+        explanation: data.explanation,
+      })
+
+      // Update the shape filter with the recommended shape
+      handleFilterChange('shape', data.shape)
+    } catch (error) {
+      // Show error message to user
+      alert('Unable to get a recommendation. Please try again.')
+    } finally {
+      setRecommending(false)
+    }
   }
 
   return (
@@ -276,21 +281,74 @@ function EngagementRingsContent() {
               <option value="rose-gold">Rose Gold</option>
               <option value="silver">Silver</option>
             </select>
-            <select 
-              className="border border-gray-300 rounded-md px-4 py-2"
-              value={selectedShape}
-              onChange={(e) => handleFilterChange('shape', e.target.value)}
-            >
-              <option value="">All Diamond Shapes</option>
-              <option value="round">Round</option>
-              <option value="oval">Oval</option>
-              <option value="princess">Princess</option>
-              <option value="emerald">Emerald</option>
-              <option value="cushion">Cushion</option>
-              <option value="marquise">Marquise</option>
-              <option value="pear">Pear</option>
-              <option value="baguette">Baguette</option>
-            </select>
+            <div className="flex gap-2 items-center">
+              <select 
+                className="border border-gray-300 rounded-md px-4 py-2"
+                value={selectedShape}
+                onChange={(e) => handleFilterChange('shape', e.target.value)}
+              >
+                <option value="">All Diamond Shapes</option>
+                <option value="round">Round</option>
+                <option value="oval">Oval</option>
+                <option value="princess">Princess</option>
+                <option value="emerald">Emerald</option>
+                <option value="cushion">Cushion</option>
+                <option value="marquise">Marquise</option>
+                <option value="pear">Pear</option>
+                <option value="baguette">Baguette</option>
+              </select>
+              <button
+                onClick={handleRandomRecommendation}
+                disabled={recommending}
+                className="px-4 py-2 bg-primary-900 text-white rounded-md hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                title="Not sure which shape to choose? Let our AI recommend one for you!"
+              >
+                {recommending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Thinking...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <span>Choose for me</span>
+                  </>
+                )}
+              </button>
+            </div>
+            {recommendation && (
+              <div className="w-full mt-4 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-primary-900 mb-1">
+                      Recommendation: {recommendation.shapeName}
+                    </h4>
+                    <p className="text-sm text-gray-700">
+                      {recommendation.explanation}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRecommendation(null)}
+                    className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                    aria-label="Close recommendation"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -311,10 +369,16 @@ function EngagementRingsContent() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {rings.map((ring) => (
+              {rings.map((ring) => {
+                // CRITICAL: Always use slug, never ID
+                if (!ring.slug) {
+                  return null
+                }
+                const slug = ring.slug
+                return (
               <Link
-                key={ring.id}
-                href={ring.id === 'marquise-trilogy' ? '/engagement-rings/marquise-trilogy' : `/engagement-rings/${ring.id}`}
+                key={slug}
+                href={`/engagement-rings/${slug}`}
                 className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
               >
                 <div className="h-80 bg-gray-100 relative overflow-hidden">
@@ -326,15 +390,15 @@ function EngagementRingsContent() {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     ) : (
-                      <Image
-                        src={ring.image}
-                        alt={ring.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                    <Image
+                      src={ring.image}
+                      alt={ring.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-300"
                         quality={100}
                         sizes="(max-width: 768px) 50vw, 33vw"
-                        unoptimized={ring.image.includes('supabase.co')}
-                      />
+                      unoptimized={ring.image.includes('supabase.co')}
+                    />
                     )
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
@@ -361,7 +425,8 @@ function EngagementRingsContent() {
                   <button className="btn-secondary w-full">View Details</button>
                 </div>
               </Link>
-              ))}
+              )
+              }).filter(Boolean)}
             </div>
           )}
         </div>

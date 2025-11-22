@@ -34,14 +34,12 @@ export default function BlogAdminPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Supabase error:', error)
         throw error
       }
       
       console.log('Fetched posts:', data) // Debug log
       setPosts(data || [])
     } catch (error) {
-      console.error('Error fetching posts:', error)
       alert(`Error loading posts: ${error}`)
     } finally {
       setLoading(false)
@@ -60,7 +58,6 @@ export default function BlogAdminPage() {
       if (error) throw error
       fetchPosts()
     } catch (error) {
-      console.error('Error deleting post:', error)
       alert('Error deleting post')
     }
   }

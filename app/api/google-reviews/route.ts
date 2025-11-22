@@ -60,7 +60,6 @@ export async function GET() {
       total_reviews: data.userRatingCount || 0,
     })
   } catch (error) {
-    console.error('Error fetching Google reviews:', error)
     
     // Retorna reviews mock em caso de erro
     return NextResponse.json({

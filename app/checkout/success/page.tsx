@@ -30,7 +30,6 @@ function CheckoutSuccessContent() {
       if (error) throw error
       setOrder(data)
     } catch (error) {
-      console.error('Error fetching order:', error)
     } finally {
       setLoading(false)
     }

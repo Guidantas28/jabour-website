@@ -20,7 +20,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     .single()
 
   if (error || !data) {
-    console.error('Error fetching post:', error)
     notFound()
   }
 
@@ -93,7 +92,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 className="object-cover"
                 unoptimized={post.featured_image_url.includes('supabase.co')}
                 onError={(e) => {
-                  console.error('Image load error:', post.featured_image_url)
                   e.currentTarget.style.display = 'none'
                 }}
               />

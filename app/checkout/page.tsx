@@ -14,8 +14,12 @@ import { getCart, clearCart } from '@/lib/cart'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || '')
+// Initialize Stripe - use production key if available, otherwise fall back to test key
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || 
+  ''
+)
 
 // Helper function to format metal names
 const formatMetal = (metal: string): string => {
@@ -155,7 +159,6 @@ function PaymentForm({
           .single()
 
         if (orderError) {
-          console.error('Supabase error:', orderError)
           throw orderError
         }
 
@@ -169,7 +172,6 @@ function PaymentForm({
         onSuccess(order.id)
       }
     } catch (err: any) {
-      console.error('Payment error:', err)
       setError(err.message || 'An error occurred during payment')
     } finally {
       setProcessing(false)
@@ -352,7 +354,6 @@ export default function CheckoutPage() {
         const { clientSecret: secret } = await response.json()
         setClientSecret(secret)
       } catch (error) {
-        console.error('Error creating payment intent:', error)
         setPaymentIntentCreated(false) // Reset on error so it can retry
       }
     }
@@ -416,7 +417,6 @@ export default function CheckoutPage() {
         setShowCreateAccount(true)
       }
     } catch (error) {
-      console.error('Error checking email:', error)
     } finally {
       setCheckingEmail(false)
     }
@@ -605,18 +605,18 @@ export default function CheckoutPage() {
                     </div>
                     {/* Phone Input */}
                     <div className="flex-1">
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required
                         className={`w-full border rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800 ${
                           phoneError ? 'border-red-500' : 'border-gray-300'
                         }`}
                         placeholder="Enter phone number"
-                      />
+                  />
                       {phoneError && (
                         <p className="text-red-500 text-xs mt-1">{phoneError}</p>
                       )}

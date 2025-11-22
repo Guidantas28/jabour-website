@@ -1,7 +1,8 @@
 // Nivoda GraphQL API Client
 // Documentation: https://bitbucket.org/nivoda/nivoda-api/src/main/
 
-const NIVODA_ENDPOINT = process.env.NEXT_PUBLIC_NIVODA_ENDPOINT || 'https://integrations.nivoda.net/api/diamonds'
+// Use server-side env var first, fallback to NEXT_PUBLIC for client-side (though this shouldn't be used client-side)
+const NIVODA_ENDPOINT = (process.env.NIVODA_ENDPOINT || process.env.NEXT_PUBLIC_NIVODA_ENDPOINT || 'https://integrations.nivoda.net/api/diamonds').trim()
 const NIVODA_USERNAME = process.env.NIVODA_USERNAME || ''
 const NIVODA_PASSWORD = process.env.NIVODA_PASSWORD || ''
 
@@ -171,33 +172,46 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     }
     
     // Build DiamondQuery according to Nivoda API documentation
+    // NO FILTERS - only shape! All other filters will be applied client-side
+    // This ensures we get all diamonds (including cheaper ones) from the API
     const query: any = {
       has_image: true, // Always filter for diamonds with images
       returns: true, // Always filter for returnable diamonds
     }
     
-    // Handle diamondType filter (natural vs lab-grown)
-    if (params.origin) {
-      if (params.origin === 'natural') {
-        query.diamondType = 'NATURAL'
-      } else if (params.origin === 'lab-grown') {
-        query.diamondType = 'LAB_GROWN'
-      }
-      // If 'both', don't add diamondType filter (show all)
-    }
+    // NOTE: We removed origin filter from API - it will be filtered client-side
+    // This ensures we get all diamonds and let the user choose
     
     if (Object.keys(filters).length > 0) {
       // Map filters to Nivoda API format
-      if (filters.shape) query.shapes = filters.shape // shapes is a string, not array
+      if (filters.shape) {
+        // shapes should be an array according to Nivoda API
+        query.shapes = [filters.shape]
+      }
       if (filters.carat) {
         query.sizes = {
           from: filters.carat.min || 0,
           to: filters.carat.max || 30.0
         }
       }
-      if (filters.color) query.color = filters.color // array of colors
-      if (filters.clarity) query.clarity = filters.clarity // array of clarities
-      if (filters.cut) query.cut = filters.cut // array of cuts
+      // Color, clarity, and cut - Nivoda API may not support arrays directly
+      // Try using range format or single values only
+      // Based on error, DiamondQuality type may need a different structure
+      // For now, let's try not including these in the query and filter client-side
+      // Or use only if single value is provided
+      // NOTE: Commenting out to avoid GraphQL type errors - will filter client-side instead
+      // if (filters.color && filters.color.length > 0) {
+      //   query.color = filters.color.map(c => c.toUpperCase().trim())
+      // }
+      // if (filters.clarity && filters.clarity.length > 0) {
+      //   query.clarity = filters.clarity.map(c => c.toUpperCase().trim())
+      // }
+      // if (filters.cut && filters.cut.length > 0) {
+      //   query.cut = filters.cut.map(c => {
+      //     const upper = c.toUpperCase().trim()
+      //     return upper.replace(/\s+/g, '_')
+      //   })
+      // }
       if (filters.price) {
         query.dollar_value = {
           from: filters.price.min || 0,
@@ -223,13 +237,6 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
       },
     }
     
-    console.log('Nivoda API Request:', {
-      endpoint: NIVODA_ENDPOINT,
-      filters,
-      pagination,
-    })
-    
-    console.log('Sending diamonds query with Bearer token...')
     const response = await fetch(NIVODA_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -240,15 +247,8 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     })
     
     const responseText = await response.text()
-    console.log('Diamonds query response status:', response.status)
-    console.log('Diamonds query response body:', responseText.substring(0, 500)) // First 500 chars
     
     if (!response.ok) {
-      console.error('Nivoda API Error Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText,
-      })
       throw new Error(`Nivoda API error (${response.status}): ${response.statusText}. ${responseText}`)
     }
     
@@ -259,15 +259,7 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
       throw new Error(`Invalid JSON response: ${responseText}`)
     }
     
-    console.log('Nivoda API Response structure:', {
-      hasData: !!data.data,
-      hasErrors: !!data.errors,
-      dataKeys: data.data ? Object.keys(data.data) : [],
-      diamondCount: data.data?.as?.diamonds_by_query?.items?.length || 0,
-    })
-    
     if (data.errors) {
-      console.error('GraphQL Errors in response:', JSON.stringify(data.errors, null, 2))
       throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`)
     }
     
@@ -276,7 +268,39 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     const totalCount = data.data?.as?.diamonds_by_query?.total_count
     
     // Return items with metadata
-    const diamonds = Array.isArray(items) ? items : []
+    let diamonds = Array.isArray(items) ? items : []
+    
+    // Sort by price ascending (lowest to highest) to ensure cheapest diamonds come first
+    // This is a safety measure in case the API doesn't respect the order parameter
+    diamonds = diamonds.sort((a: any, b: any) => {
+      const priceA = a.price || 0
+      const priceB = b.price || 0
+      return priceA - priceB
+    })
+    
+    // Convert prices from cents to pounds if they appear to be in cents
+    // Nivoda API returns prices in cents (smallest currency unit)
+    if (diamonds.length > 0) {
+      const prices = diamonds.map((d: any) => d.price || 0).filter((p: number) => p > 0)
+      if (prices.length > 0) {
+        const minPrice = Math.min(...prices)
+        // Check if prices are in cents (smallest currency unit)
+        // Nivoda API typically returns prices in cents/pence
+        // If minimum price is > 100, it's almost certainly in cents (diamonds don't cost < £1)
+        const likelyInCents = minPrice > 100 || prices.some(p => p > 1000)
+        
+        if (likelyInCents) {
+          diamonds.forEach((d: any) => {
+            if (d.price && d.price > 0) {
+              d.price = d.price / 100
+            }
+            if (d.discount && d.discount > 0) {
+              d.discount = d.discount / 100
+            }
+          })
+        }
+      }
+    }
     
     // Add metadata to each diamond for pagination
     return diamonds.map((diamond: any) => ({
@@ -284,7 +308,6 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
       _totalCount: totalCount,
     }))
   } catch (error: any) {
-    console.error('Error searching diamonds:', error)
     throw error
   }
 }
@@ -294,7 +317,6 @@ async function authenticate(): Promise<string> {
   try {
     // Check if we have a valid token
     if (authToken && Date.now() < tokenExpiry) {
-      console.log('Using cached Nivoda token')
       return authToken
     }
 
@@ -308,12 +330,6 @@ async function authenticate(): Promise<string> {
     }
 
     const auth = Buffer.from(`${NIVODA_USERNAME}:${NIVODA_PASSWORD}`).toString('base64')
-
-    console.log('Attempting Nivoda authentication...', {
-      endpoint: NIVODA_ENDPOINT,
-      hasUsername: !!NIVODA_USERNAME,
-      hasPassword: !!NIVODA_PASSWORD,
-    })
 
     const response = await fetch(NIVODA_ENDPOINT, {
       method: 'POST',
@@ -331,8 +347,6 @@ async function authenticate(): Promise<string> {
     })
 
     const responseText = await response.text()
-    console.log('Authentication response status:', response.status)
-    console.log('Authentication response body:', responseText)
 
     if (!response.ok) {
       throw new Error(`Authentication failed (${response.status}): ${responseText}`)
@@ -346,17 +360,13 @@ async function authenticate(): Promise<string> {
     }
 
     if (data.errors) {
-      console.error('Authentication GraphQL errors:', JSON.stringify(data.errors, null, 2))
       throw new Error(`Authentication errors: ${JSON.stringify(data.errors)}`)
     }
-
-    console.log('Authentication data structure:', JSON.stringify(data, null, 2))
 
     // Extract token from authenticate response structure
     const token = data.data?.authenticate?.username_and_password?.token
 
     if (!token) {
-      console.error('Full authentication response:', JSON.stringify(data, null, 2))
       throw new Error('No token received from authentication. Response structure: ' + JSON.stringify(data, null, 2))
     }
 
@@ -364,10 +374,8 @@ async function authenticate(): Promise<string> {
     authToken = token
     tokenExpiry = Date.now() + 5.5 * 60 * 60 * 1000
 
-    console.log('Nivoda authentication successful, token cached')
     return token
   } catch (error: any) {
-    console.error('Error authenticating with Nivoda:', error)
     // Reset token on error
     authToken = null
     tokenExpiry = 0

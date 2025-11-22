@@ -42,14 +42,12 @@ export default function AdminDashboardPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Supabase error:', error)
         throw error
       }
 
       setOrders(data || [])
       calculateStats(data || [])
     } catch (error) {
-      console.error('Error fetching orders:', error)
       alert(`Error loading orders: ${error}`)
     } finally {
       setLoading(false)
@@ -80,7 +78,6 @@ export default function AdminDashboardPage() {
       if (error) throw error
       fetchOrders()
     } catch (error) {
-      console.error('Error updating order:', error)
       alert('Error updating order status')
     }
   }

@@ -53,13 +53,11 @@ export default function NewBlogPostPage() {
         }])
 
       if (error) {
-        console.error('Supabase error:', error)
         throw error
       }
 
       router.push('/admin/blog')
     } catch (error: any) {
-      console.error('Error creating post:', error)
       alert(`Error creating post: ${error.message || 'Unknown error'}`)
     } finally {
       setLoading(false)

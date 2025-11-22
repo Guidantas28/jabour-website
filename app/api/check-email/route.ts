@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     // If no error, the email exists (unlikely with dummy password)
     return NextResponse.json({ exists: false })
   } catch (error: any) {
-    console.error('Error checking email:', error)
     // Default to false if there's an error
     return NextResponse.json({ exists: false })
   }

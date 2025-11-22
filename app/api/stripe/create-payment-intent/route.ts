@@ -3,8 +3,8 @@ import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate Stripe key
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY_TEST
+    // Use production key if available, otherwise fall back to test key
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY_TEST
     if (!stripeSecretKey) {
       return NextResponse.json(
         { error: 'Stripe secret key is not configured' },
@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
     })
   } catch (error: any) {
-    console.error('Stripe error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to create payment intent' },
       { status: 500 }

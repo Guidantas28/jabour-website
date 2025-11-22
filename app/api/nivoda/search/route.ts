@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
     // Calculate if there are more diamonds
     const currentOffset = params.offset || 0
     const limit = params.limit || 50
+    const diamondsReturned = cleanDiamonds.length
     const hasMore = totalCount 
-      ? (currentOffset + cleanDiamonds.length) < totalCount
-      : cleanDiamonds.length === limit // If we got the full limit, assume there might be more
+      ? (currentOffset + diamondsReturned) < totalCount
+      : diamondsReturned === limit // If we got the full limit, assume there might be more
     
     return NextResponse.json({ 
       diamonds: cleanDiamonds,
@@ -39,7 +40,6 @@ export async function POST(request: NextRequest) {
       hasMore
     })
   } catch (error: any) {
-    console.error('Error searching diamonds:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to search diamonds' },
       { status: 500 }
@@ -50,18 +50,20 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const colorParam = searchParams.get('color')
-    const clarityParam = searchParams.get('clarity')
-    const cutParam = searchParams.get('cut')
+    
+    // Use getAll to get all values for parameters that can have multiple values
+    const colorParams = searchParams.getAll('color')
+    const clarityParams = searchParams.getAll('clarity')
+    const cutParams = searchParams.getAll('cut')
     
     const originParam = searchParams.get('origin')
     const params: DiamondSearchParams = {
       shape: searchParams.get('shape') || undefined,
       minCarat: searchParams.get('minCarat') ? parseFloat(searchParams.get('minCarat')!) : undefined,
       maxCarat: searchParams.get('maxCarat') ? parseFloat(searchParams.get('maxCarat')!) : undefined,
-      color: colorParam ? (colorParam.includes(',') ? colorParam.split(',') : [colorParam]) : undefined,
-      clarity: clarityParam ? (clarityParam.includes(',') ? clarityParam.split(',') : [clarityParam]) : undefined,
-      cut: cutParam ? (cutParam.includes(',') ? cutParam.split(',') : [cutParam]) : undefined,
+      color: colorParams.length > 0 ? colorParams : undefined,
+      clarity: clarityParams.length > 0 ? clarityParams : undefined,
+      cut: cutParams.length > 0 ? cutParams : undefined,
       minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
       maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
@@ -94,9 +96,10 @@ export async function GET(request: NextRequest) {
     // Calculate if there are more diamonds
     const currentOffset = params.offset || 0
     const limit = params.limit || 50
+    const diamondsReturned = cleanDiamonds.length
     const hasMore = totalCount 
-      ? (currentOffset + cleanDiamonds.length) < totalCount
-      : cleanDiamonds.length === limit // If we got the full limit, assume there might be more
+      ? (currentOffset + diamondsReturned) < totalCount
+      : diamondsReturned === limit // If we got the full limit, assume there might be more
     
     return NextResponse.json({ 
       diamonds: cleanDiamonds,
@@ -104,7 +107,6 @@ export async function GET(request: NextRequest) {
       hasMore
     })
   } catch (error: any) {
-    console.error('Error searching diamonds:', error)
     return NextResponse.json(
       { 
         error: error.message || 'Failed to search diamonds',

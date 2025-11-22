@@ -1,11 +1,91 @@
 'use client'
 
-import { notFound } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { addToCart } from '@/lib/cart'
-import { supabase } from '@/lib/supabase'
+import { showSuccess } from '@/components/Toast'
+
+interface ProductSelections {
+  metal: string
+  bandStyle: string
+  shape?: string
+  selectedDiamond?: string
+  ringSize?: string
+}
+
+interface Diamond {
+  id: string
+  diamond?: {
+    id: string
+    image?: string
+    video?: string
+    certificate?: {
+      id: string
+      lab?: string
+      shape?: string
+      certNumber: string
+      carats: number
+      color?: string
+      clarity?: string
+      cut?: string
+    }
+  }
+  price?: number
+  discount?: number
+}
+
+interface Product {
+  id: string
+  name: string
+  slug: string
+  category: string
+  description: string
+  base_price: number
+  featured_image_url: string
+  diamond_selection_mode?: 'nivoda' | 'custom' | 'both'
+  product_configurations: Array<{
+    id: string
+    configuration_type: string
+    configuration_value: string
+    display_name: string
+    price_adjustment: number
+    display_order: number
+    metadata: any
+    active: boolean
+  }>
+  product_images: Array<{
+    id: string
+    image_url: string
+    shape: string | null
+    metal: string | null
+    display_order: number
+    is_primary: boolean
+  }>
+  product_diamond_settings: Array<{
+    id: string
+    shape: string | null
+    min_carat: number
+    max_carat: number
+    allowed_colors: string[] | null
+    allowed_clarities: string[] | null
+    allowed_cuts: string[] | null
+    origin: string
+    min_price: number
+    max_price: number
+  }>
+  product_diamond_customization_options?: Array<{
+    id: string
+    option_type: string
+    option_value: string
+    display_name: string
+    price_adjustment: number
+    display_order: number
+    metadata: any
+    active: boolean
+  }>
+}
 
 interface ProductPageProps {
   params: {
@@ -13,265 +93,1827 @@ interface ProductPageProps {
   }
 }
 
-const defaultProducts: Record<string, {
-  name: string
-  description: string
-  price: string
-  metals: string[]
-  diamondShapes: string[]
-  images: string[]
-}> = {
-  'classic-solitaire': {
-    name: 'Classic Solitaire',
-    description: 'A timeless classic engagement ring featuring a single brilliant diamond set in a simple, elegant band. Perfect for those who appreciate understated elegance.',
-    price: 'From £995',
-    metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold'],
-    diamondShapes: ['Round', 'Oval', 'Princess', 'Emerald', 'Cushion'],
-    images: ['/rings/solitaire-1.jpg', '/rings/solitaire-2.jpg'],
-  },
-  'elegant-halo': {
-    name: 'Elegant Halo',
-    description: 'A stunning halo engagement ring with a central diamond surrounded by a delicate halo of smaller diamonds, creating maximum sparkle and brilliance.',
-    price: 'From £1,550',
-    metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold'],
-    diamondShapes: ['Round', 'Oval', 'Cushion'],
-    images: ['/rings/halo-1.jpg', '/rings/halo-2.jpg'],
-  },
-  'timeless-trilogy': {
-    name: 'Timeless Trilogy',
-    description: 'A beautiful three-stone engagement ring representing your past, present, and future together. The central diamond is flanked by two smaller stones.',
-    price: 'From £1,575',
-    metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold'],
-    diamondShapes: ['Round', 'Oval', 'Princess'],
-    images: ['/rings/trilogy-1.jpg', '/rings/trilogy-2.jpg'],
-  },
+// Helper function to proxy video URLs through our API to avoid CORS issues
+function getProxiedVideoUrl(videoUrl: string | undefined): string | undefined {
+  if (!videoUrl) return undefined
+  if (videoUrl.includes('loupe360.com')) {
+    return `/api/video-proxy?url=${encodeURIComponent(videoUrl)}`
+  }
+  return videoUrl
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
+function DynamicProductContent({ params }: ProductPageProps) {
   const router = useRouter()
-  const [product, setProduct] = useState<any>(null)
+  const searchParams = useSearchParams()
+  const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedMetal, setSelectedMetal] = useState<string>('')
-  const [selectedShape, setSelectedShape] = useState<string>('')
-  const [showMessage, setShowMessage] = useState(false)
+  const [mainImageIndex, setMainImageIndex] = useState(0)
+  const [availableDiamonds, setAvailableDiamonds] = useState<Diamond[]>([])
+  const [isLoadingDiamonds, setIsLoadingDiamonds] = useState(false)
+  const [diamondError, setDiamondError] = useState<string | null>(null)
+  const [allDiamonds, setAllDiamonds] = useState<Diamond[]>([]) // All diamonds loaded from API
+  const [displayedDiamondsCount, setDisplayedDiamondsCount] = useState(50) // How many to show initially
+  const [hasMoreDiamonds, setHasMoreDiamonds] = useState(false)
+  const [totalDiamonds, setTotalDiamonds] = useState(0)
+  const [showCartModal, setShowCartModal] = useState(false)
+  const [selectedDiamondDetail, setSelectedDiamondDetail] = useState<Diamond | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'carat-asc' | 'carat-desc'>('price-asc')
+  const [recommendingDiamond, setRecommendingDiamond] = useState(false)
+  const [diamondRecommendation, setDiamondRecommendation] = useState<{
+    diamondId: string
+    explanation: string
+  } | null>(null)
+  
+  // Diamond filter states
+  const [diamondFilters, setDiamondFilters] = useState({
+    colors: [] as string[],
+    clarities: [] as string[],
+    cuts: [] as string[],
+    minCarat: undefined as number | undefined,
+    maxCarat: undefined as number | undefined,
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+    origin: 'both' as 'natural' | 'lab-grown' | 'both',
+  })
 
+  // Custom diamond selections (for custom mode)
+  const [customDiamond, setCustomDiamond] = useState({
+    carat: '',
+    color: '',
+    clarity: '',
+    cut: '',
+  })
+
+  // Diamond selection type when mode is "both" - user can choose between 'nivoda' or 'custom'
+  const [diamondSelectionType, setDiamondSelectionType] = useState<'nivoda' | 'custom'>('nivoda')
+
+  // Get configurations from product
+  const metals = product?.product_configurations
+    .filter(c => c.configuration_type === 'metal' && c.active)
+    .sort((a, b) => {
+      // Prioritize 18k metals first
+      const aIs18k = a.configuration_value?.includes('18k') || a.display_name?.includes('18k')
+      const bIs18k = b.configuration_value?.includes('18k') || b.display_name?.includes('18k')
+      
+      if (aIs18k && !bIs18k) return -1
+      if (!aIs18k && bIs18k) return 1
+      
+      // If both are same type (both 18k or both 9k), sort by display_order
+      return a.display_order - b.display_order
+    })
+    .map(c => ({
+      id: c.configuration_value,
+      name: c.display_name,
+      priceAdjustment: c.price_adjustment,
+      metadata: c.metadata || {},
+    })) || []
+
+  const diamondShapes = product?.product_configurations
+    .filter(c => c.configuration_type === 'shape' && c.active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(c => ({
+      id: c.configuration_value,
+      name: c.display_name,
+      icon: c.metadata?.icon || '/images/diamonds/round.png',
+    })) || []
+
+  const bandStyles = product?.product_configurations
+    .filter(c => c.configuration_type === 'band_style' && c.active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(c => ({
+      id: c.configuration_value,
+      name: c.display_name,
+      description: c.metadata?.description || '',
+      icon: c.metadata?.icon || 'plain',
+    })) || []
+
+  const ringSizes = product?.product_configurations
+    .filter(c => c.configuration_type === 'ring_size' && c.active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(c => c.configuration_value) || []
+
+  // Get customization options (for custom mode)
+  const caratOptions = product?.product_diamond_customization_options
+    ?.filter(o => o.option_type === 'carat' && o.active)
+    .sort((a, b) => a.display_order - b.display_order) || []
+
+  const colorOptions = product?.product_diamond_customization_options
+    ?.filter(o => o.option_type === 'color' && o.active)
+    .sort((a, b) => a.display_order - b.display_order) || []
+
+  const clarityOptions = product?.product_diamond_customization_options
+    ?.filter(o => o.option_type === 'clarity' && o.active)
+    .sort((a, b) => a.display_order - b.display_order) || []
+
+  const cutOptions = product?.product_diamond_customization_options
+    ?.filter(o => o.option_type === 'cut' && o.active)
+    .sort((a, b) => a.display_order - b.display_order) || []
+
+  // Default selections
+  const defaultSelections: ProductSelections = {
+    metal: metals[0]?.id || '',
+    bandStyle: bandStyles[0]?.id || '',
+    ringSize: ringSizes.find(s => s === 'M') || ringSizes[0] || '',
+  }
+
+  // Initialize selections from URL params or defaults
+  const getInitialSelections = (): ProductSelections => {
+    const shape = searchParams?.get('shape') || undefined
+    const metal = searchParams?.get('metal') || defaultSelections.metal
+    const bandStyle = searchParams?.get('bandStyle') || defaultSelections.bandStyle
+    const selectedDiamond = searchParams?.get('selectedDiamond') || undefined
+    const ringSize = searchParams?.get('ringSize') || defaultSelections.ringSize
+
+    return {
+      metal,
+      bandStyle,
+      shape,
+      selectedDiamond,
+      ringSize,
+    }
+  }
+
+  const [selections, setSelections] = useState<ProductSelections>(getInitialSelections)
+
+  // Fetch product data
   useEffect(() => {
-    fetchProduct()
-  }, [params.slug])
-
-  const fetchProduct = async () => {
-    try {
-      // Try to fetch from Supabase
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('slug', params.slug)
-        .eq('category', 'engagement-rings')
-        .single()
-
-      if (data && !error) {
-        setProduct({
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          metals: Array.isArray(data.metals) ? data.metals : [],
-          diamondShapes: Array.isArray(data.diamond_shapes) ? data.diamond_shapes : [],
-          images: Array.isArray(data.images) ? data.images : [],
-        })
-      } else {
-        // Fallback to default products
-        const defaultProduct = defaultProducts[params.slug]
-        if (defaultProduct) {
-          setProduct(defaultProduct)
-        } else {
-          notFound()
+    const fetchProduct = async () => {
+      try {
+        console.log('Fetching product with slug:', params.slug)
+        const response = await fetch(`/api/products/${params.slug}`)
+        const data = await response.json()
+        
+        console.log('API Response:', { status: response.status, ok: response.ok, data })
+        
+        if (!response.ok) {
+          setProduct(null)
+          setLoading(false)
+          return
         }
+        
+        if (!data || !data.product) {
+          setProduct(null)
+          setLoading(false)
+          return
+        }
+        
+        console.log('Product loaded:', data.product.name)
+        setProduct(data.product)
+        
+        // Update default selections with product data
+        const initialSelections = getInitialSelections()
+        setSelections(initialSelections)
+      } catch (error) {
+        setProduct(null)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      // Fallback to default products
-      const defaultProduct = defaultProducts[params.slug]
-      if (defaultProduct) {
-        setProduct(defaultProduct)
-      } else {
-        notFound()
-      }
-    } finally {
+    }
+
+    if (params.slug) {
+    fetchProduct()
+    } else {
       setLoading(false)
     }
+  }, [params.slug])
+
+  // Sync URL with selections
+  useEffect(() => {
+    if (!product) return
+    
+    const params = new URLSearchParams()
+    if (selections.metal) params.set('metal', selections.metal)
+    if (selections.bandStyle) params.set('bandStyle', selections.bandStyle)
+    if (selections.shape) params.set('shape', selections.shape)
+    if (selections.selectedDiamond) params.set('selectedDiamond', selections.selectedDiamond)
+    if (selections.ringSize) params.set('ringSize', selections.ringSize)
+
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`
+    window.history.replaceState({}, '', newUrl)
+  }, [selections, product])
+
+  // Fetch images based on shape and metal
+  const [images, setImages] = useState<string[]>([])
+  
+  useEffect(() => {
+    const fetchImages = async () => {
+      if (!product) return
+      
+      try {
+        const params = new URLSearchParams()
+        if (selections.shape) params.set('shape', selections.shape)
+        if (selections.metal) params.set('metal', selections.metal)
+        
+        const response = await fetch(`/api/products/${product.slug}/images?${params.toString()}`)
+        if (response.ok) {
+          const data = await response.json()
+          const imageUrls = data.images.map((img: any) => img.image_url)
+          setImages(imageUrls.length > 0 ? imageUrls : [product.featured_image_url])
+          setMainImageIndex(0)
+        } else {
+          setImages([product.featured_image_url])
+        }
+      } catch (error) {
+        setImages([product.featured_image_url])
+      }
+    }
+
+    fetchImages()
+  }, [product, selections.shape, selections.metal])
+
+  // Search diamonds when shape is selected (only for nivoda mode)
+  useEffect(() => {
+    if (selections.shape && product && product.diamond_selection_mode === 'nivoda') {
+      searchDiamondsFromAPI(selections.shape, selections)
+    }
+  }, [selections.shape, product])
+
+  const updateSelection = (key: keyof ProductSelections, value: any) => {
+    setSelections((prev) => {
+      const newSelections = { ...prev, [key]: value }
+      
+      if (key === 'shape' && value && product?.diamond_selection_mode === 'nivoda') {
+        setTimeout(() => {
+          searchDiamondsFromAPI(value as string, newSelections)
+        }, 0)
+      }
+      
+      return newSelections
+    })
+  }
+
+  const handleDiamondRecommendation = async () => {
+    if (!availableDiamonds || availableDiamonds.length === 0) {
+      alert('Please wait for diamonds to load, or select a diamond shape first.')
+      return
+    }
+    
+    setRecommendingDiamond(true)
+    setDiamondRecommendation(null)
+    
+    try {
+      const response = await fetch('/api/recommend-diamond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          diamonds: availableDiamonds,
+          preferences: {
+            shape: selections.shape,
+            metal: selections.metal,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get recommendation')
+      }
+
+      const data = await response.json()
+      setDiamondRecommendation({
+        diamondId: data.diamondId,
+        explanation: data.explanation,
+      })
+
+      // Find and select the recommended diamond
+      const recommendedDiamond = availableDiamonds.find(d => d.id === data.diamondId)
+      
+      if (recommendedDiamond) {
+        updateSelection('selectedDiamond', recommendedDiamond.id)
+        setSelectedDiamondDetail(recommendedDiamond)
+        // Scroll to the selected diamond
+        setTimeout(() => {
+          const element = document.getElementById(`diamond-${recommendedDiamond.id}`)
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
+    } catch (error) {
+      alert('Unable to get a recommendation. Please try again.')
+    } finally {
+      setRecommendingDiamond(false)
+    }
+  }
+
+  const searchDiamondsFromAPI = async (shape: string | undefined, currentSelections: ProductSelections, loadMore: boolean = false) => {
+    if (!product || product.diamond_selection_mode !== 'nivoda' || !shape) return
+    
+    setIsLoadingDiamonds(true)
+    setDiamondError(null)
+    
+    // If not loading more, reset and fetch all diamonds
+    if (!loadMore) {
+      setAllDiamonds([])
+      setDisplayedDiamondsCount(50) // Show first 50
+      setAvailableDiamonds([])
+    }
+    
+    try {
+      // Fetch ALL diamonds by making multiple requests (API limit is 50)
+      // We'll make requests until we get less than 50 results
+      console.log('🔍 Loading ALL diamonds (paginated):', {
+        shape,
+        loadMore,
+        currentDisplayed: displayedDiamondsCount,
+        allDiamondsCount: allDiamonds.length
+      })
+      
+      let allDiamondsFromAPI: Diamond[] = []
+      let currentOffset = 0
+      const limit = 50
+      let hasMore = true
+      let pageCount = 0
+      
+      // Fetch all pages until we get less than 50 results
+      while (hasMore) {
+        pageCount++
+        const params = new URLSearchParams({
+          shape: shape,
+          limit: limit.toString(),
+          offset: currentOffset.toString(),
+        })
+        
+        console.log(`📤 Fetching page ${pageCount} (offset: ${currentOffset})...`)
+        
+        const response = await fetch(`/api/nivoda/search?${params.toString()}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to search diamonds')
+        }
+        
+        const data = await response.json()
+        const diamondsFromPage = data.diamonds || []
+        
+        console.log(`📥 Page ${pageCount} received:`, {
+          diamondsReceived: diamondsFromPage.length,
+          hasMore: data.hasMore,
+          totalCount: data.total_count
+        })
+        
+        // Add diamonds from this page
+        allDiamondsFromAPI = [...allDiamondsFromAPI, ...diamondsFromPage]
+        
+        // Check if there are more pages
+        // Stop if we got less than 50 diamonds (last page) or hasMore is false
+        if (diamondsFromPage.length < limit || !data.hasMore) {
+          hasMore = false
+          console.log(`✅ Finished fetching. Total pages: ${pageCount}, Total diamonds: ${allDiamondsFromAPI.length}`)
+        } else {
+          currentOffset += limit
+        }
+      }
+      
+      console.log('📊 All diamonds fetched:', {
+        totalPages: pageCount,
+        totalDiamonds: allDiamondsFromAPI.length
+      })
+      
+      // Now process all diamonds with filters
+      console.log('📦 Processing all diamonds:', {
+        totalDiamonds: allDiamondsFromAPI.length,
+        priceRange: allDiamondsFromAPI.length > 0 ? {
+          min: Math.min(...allDiamondsFromAPI.map((d: Diamond) => d.price || 0)),
+          max: Math.max(...allDiamondsFromAPI.map((d: Diamond) => d.price || 0)),
+          first10Prices: allDiamondsFromAPI.slice(0, 10).map((d: Diamond) => d.price || 0)
+        } : null
+      })
+      
+      // Use allDiamondsFromAPI as if it came from a single response
+      const data = { diamonds: allDiamondsFromAPI }
+      
+      // Start with all diamonds that have images
+      let filteredDiamonds = (data.diamonds || []).filter((d: Diamond) => {
+        // Must have image
+        return !!d.diamond?.image
+      })
+      
+      console.log('🖼️ Diamonds with images:', filteredDiamonds.length)
+      console.log('💰 Price range of diamonds with images:', filteredDiamonds.length > 0 ? {
+        min: Math.min(...filteredDiamonds.map((d: Diamond) => d.price || 0)),
+        max: Math.max(...filteredDiamonds.map((d: Diamond) => d.price || 0)),
+        first10Prices: filteredDiamonds.slice(0, 10).map((d: Diamond) => d.price || 0)
+      } : null)
+      
+      // NOTE: Origin filter (natural vs lab-grown) removed because diamondType field
+      // is not available in Nivoda API response. The filter UI is still shown but
+      // won't filter results. To enable this, we'd need to add diamondType to the
+      // GraphQL query if the API supports it, or use another field to identify origin.
+      
+      // Apply filters from user selection (diamondFilters state)
+      if (diamondFilters.colors && diamondFilters.colors.length > 0) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const diamondColor = d.diamond?.certificate?.color?.toUpperCase()
+          return diamondColor && diamondFilters.colors.some(c => c.toUpperCase() === diamondColor)
+        })
+      }
+      
+      if (diamondFilters.clarities && diamondFilters.clarities.length > 0) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const diamondClarity = d.diamond?.certificate?.clarity?.toUpperCase()
+          return diamondClarity && diamondFilters.clarities.some(c => c.toUpperCase() === diamondClarity)
+        })
+      }
+      
+      if (diamondFilters.cuts && diamondFilters.cuts.length > 0) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const diamondCut = d.diamond?.certificate?.cut?.toUpperCase().replace(/\s+/g, '_')
+          return diamondCut && diamondFilters.cuts.some(c => c.toUpperCase().replace(/\s+/g, '_') === diamondCut)
+        })
+      }
+      
+      // Apply carat filter (only if user set a value)
+      if (diamondFilters.minCarat !== undefined && diamondFilters.minCarat !== null) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const carat = d.diamond?.certificate?.carats || 0
+          return carat >= diamondFilters.minCarat!
+        })
+      }
+      
+      if (diamondFilters.maxCarat !== undefined && diamondFilters.maxCarat !== null) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const carat = d.diamond?.certificate?.carats || 0
+          return carat <= diamondFilters.maxCarat!
+        })
+      }
+      
+      // Apply price filter (only if user set a value)
+      if (diamondFilters.minPrice !== undefined && diamondFilters.minPrice !== null && diamondFilters.minPrice > 0) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const price = d.price || 0
+          return price >= diamondFilters.minPrice!
+        })
+      }
+      
+      if (diamondFilters.maxPrice !== undefined && diamondFilters.maxPrice !== null && diamondFilters.maxPrice > 0) {
+        filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
+          const price = d.price || 0
+          return price <= diamondFilters.maxPrice!
+        })
+      }
+      
+      const diamondsWithImages = filteredDiamonds
+        .sort((a: Diamond, b: Diamond) => {
+          const priceA = a.price || 0
+          const priceB = b.price || 0
+          return priceA - priceB
+        })
+      
+      console.log('✅ Final filtered diamonds:', diamondsWithImages.length)
+      console.log('📊 Sample diamond:', diamondsWithImages[0])
+      
+      // If no diamonds passed the filters, show all diamonds with images (less restrictive)
+      // This helps debug and ensures users see results
+      if (diamondsWithImages.length === 0 && filteredDiamonds.length === 0) {
+        const allWithImages = (data.diamonds || []).filter((d: Diamond) => !!d.diamond?.image)
+        const fallbackDiamonds = allWithImages.sort((a: Diamond, b: Diamond) => {
+          const priceA = a.price || 0
+          const priceB = b.price || 0
+          return priceA - priceB
+        })
+        
+        // Store all and show first 50
+        setAllDiamonds(fallbackDiamonds)
+        const initialDisplayCount = 50
+        setDisplayedDiamondsCount(initialDisplayCount)
+        setAvailableDiamonds(fallbackDiamonds.slice(0, initialDisplayCount))
+        setHasMoreDiamonds(fallbackDiamonds.length > initialDisplayCount)
+        setTotalDiamonds(fallbackDiamonds.length)
+        
+        return
+      }
+      
+      // Store ALL filtered diamonds
+      // We'll paginate in the client by showing only a subset
+      const allFilteredDiamonds = diamondsWithImages
+      
+      console.log('📥 Processing response:', {
+        diamondsReceivedFromAPI: (data.diamonds || []).length,
+        diamondsAfterFilters: allFilteredDiamonds.length,
+        currentDisplayed: displayedDiamondsCount
+      })
+      
+      // Store all filtered diamonds
+      setAllDiamonds(allFilteredDiamonds)
+      
+      // Show first batch (50 diamonds)
+      const initialDisplayCount = 50
+      setDisplayedDiamondsCount(initialDisplayCount)
+      setAvailableDiamonds(allFilteredDiamonds.slice(0, initialDisplayCount))
+      
+      // Check if there are more to show
+      const hasMoreToShow = allFilteredDiamonds.length > initialDisplayCount
+      setHasMoreDiamonds(hasMoreToShow)
+      
+      // Set total count to the number of filtered diamonds
+      setTotalDiamonds(allFilteredDiamonds.length)
+      
+      console.log('📄 Client-side pagination:', {
+        totalFiltered: allFilteredDiamonds.length,
+        displayed: initialDisplayCount,
+        hasMoreToShow,
+        totalFromAPI: allDiamondsFromAPI.length
+      })
+    } catch (error: any) {
+      setDiamondError(error.message || 'Failed to load diamonds. Please try again.')
+    } finally {
+      setIsLoadingDiamonds(false)
+    }
+  }
+  
+  const loadMoreDiamonds = () => {
+    // Load more from the already-fetched diamonds (client-side pagination)
+    const nextCount = displayedDiamondsCount + 50
+    const newDisplayed = allDiamonds.slice(0, nextCount)
+    
+    console.log('🔄 Load More (client-side):', {
+      currentDisplayed: displayedDiamondsCount,
+      allDiamondsCount: allDiamonds.length,
+      nextCount,
+      willShow: newDisplayed.length,
+      hasMore: nextCount < allDiamonds.length
+    })
+    
+    setDisplayedDiamondsCount(nextCount)
+    setAvailableDiamonds(newDisplayed)
+    setHasMoreDiamonds(nextCount < allDiamonds.length)
+  }
+
+  // Calculate price
+  const selectedMetal = metals.find((m) => m.id === selections.metal)
+  const selectedBandStyle = bandStyles.find((b) => b.id === selections.bandStyle)
+  const selectedDiamond = availableDiamonds.find((d) => d.id === selections.selectedDiamond)
+
+  // Calculate custom diamond price (for custom mode)
+  const customDiamondPrice = product?.diamond_selection_mode === 'custom' ? (() => {
+    const selectedCarat = caratOptions.find(o => o.option_value === customDiamond.carat)
+    const selectedColor = colorOptions.find(o => o.option_value === customDiamond.color)
+    const selectedClarity = clarityOptions.find(o => o.option_value === customDiamond.clarity)
+    const selectedCut = cutOptions.find(o => o.option_value === customDiamond.cut)
+    
+    // Base price calculation would go here - for now return 0
+    // This should be calculated based on carat weight and adjustments
+    return 0
+  })() : 0
+
+  const settingPrice = (product?.base_price || 0) + (selectedMetal?.priceAdjustment || 0)
+  const diamondPrice = product?.diamond_selection_mode === 'custom' 
+    ? customDiamondPrice 
+    : (selectedDiamond?.price || 0)
+  const totalPrice = settingPrice + diamondPrice
+
+  const handleAddToCart = () => {
+    if (!selections.shape) {
+      showSuccess('Please select a diamond shape first')
+      return
+    }
+
+    if (product?.diamond_selection_mode === 'nivoda' && !selections.selectedDiamond) {
+      showSuccess('Please select a diamond first')
+      return
+    }
+    
+    if (product?.diamond_selection_mode === 'custom') {
+      if (!customDiamond.carat || !customDiamond.color || !customDiamond.clarity || !customDiamond.cut) {
+        showSuccess('Please complete all diamond specifications')
+        return
+      }
+    }
+
+    const cartProduct = {
+      id: `${product?.slug}-${selections.selectedDiamond || 'custom'}-${selections.metal}-${selections.bandStyle}-${selections.ringSize}`,
+      name: product?.name || '',
+      price: totalPrice,
+      image: images[0] || product?.featured_image_url || '',
+      metal: selectedMetal?.name || selections.metal,
+      diamondShape: selections.shape,
+      customizations: {
+        metal: selectedMetal?.name || selections.metal,
+        bandStyle: selectedBandStyle?.name || selections.bandStyle,
+        ringSize: selections.ringSize,
+        shape: selections.shape,
+        diamond: product?.diamond_selection_mode === 'nivoda' && selectedDiamond ? {
+          id: selectedDiamond.id,
+          carat: selectedDiamond.diamond?.certificate?.carats,
+          color: selectedDiamond.diamond?.certificate?.color,
+          clarity: selectedDiamond.diamond?.certificate?.clarity,
+          cut: selectedDiamond.diamond?.certificate?.cut,
+          lab: selectedDiamond.diamond?.certificate?.lab,
+        } : product?.diamond_selection_mode === 'custom' ? {
+          carat: parseFloat(customDiamond.carat),
+          color: customDiamond.color,
+          clarity: customDiamond.clarity,
+          cut: customDiamond.cut,
+        } : undefined,
+      },
+    }
+
+    addToCart(cartProduct)
+    window.dispatchEvent(new Event('cartUpdated'))
+    setShowCartModal(true)
+  }
+
+  const mainImage = images[mainImageIndex] || images[0] || product?.featured_image_url
+
+  const nextImage = () => {
+    setMainImageIndex((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = () => {
+    setMainImageIndex((prev) => (prev - 1 + images.length) % images.length)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading product...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!loading && !product) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-primary-900 mb-4">Product not found</h1>
+          <p className="text-gray-600 mb-4">The product with slug "{params.slug}" could not be found.</p>
+          <p className="text-sm text-gray-500 mb-6">Please check if the product exists in the database.</p>
+          <Link href="/engagement-rings" className="text-primary-800 hover:underline inline-block">
+            ← Back to Engagement Rings
+          </Link>
+        </div>
       </div>
     )
   }
 
   if (!product) {
-    notFound()
+    return null
   }
 
-  // Extract numeric price from "From £995" format
-  const priceMatch = product.price.match(/£([0-9,]+)/)
-  const price = priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : 995
-
-  const handleAddToCart = () => {
-    if (!selectedMetal || !selectedShape) {
-      alert('Please select a metal and diamond shape')
-      return
-    }
-
-    addToCart({
-      id: `${params.slug}-${selectedMetal}-${selectedShape}`,
-      name: product.name,
-      price,
-      metal: selectedMetal,
-      diamondShape: selectedShape,
-    })
-
-    setShowMessage(true)
-    setTimeout(() => setShowMessage(false), 3000)
-    
-    // Trigger cart update (you could use a context/state management solution here)
-    window.dispatchEvent(new Event('cartUpdated'))
-  }
-
-  const handleBookAppointment = () => {
-    router.push('/book-appointment')
-  }
+  // Determine which modes are available
+  const hasCustomMode = product?.diamond_selection_mode === 'custom' || product?.diamond_selection_mode === 'both'
+  const hasNivodaMode = product?.diamond_selection_mode === 'nivoda' || product?.diamond_selection_mode === 'both'
+  const isBothMode = product?.diamond_selection_mode === 'both'
+  
+  // Determine which mode is currently active
+  const isCustomMode = isBothMode ? diamondSelectionType === 'custom' : product?.diamond_selection_mode === 'custom'
+  const isNivodaMode = isBothMode ? diamondSelectionType === 'nivoda' : product?.diamond_selection_mode === 'nivoda'
 
   return (
-    <div className="min-h-screen">
-      <div className="container-custom section-padding">
+    <div className="min-h-screen bg-white">
         {/* Breadcrumb */}
-        <nav className="mb-8 text-sm text-gray-600">
+      <section className="bg-gray-50 py-4 border-b border-gray-200">
+        <div className="container-custom px-4 sm:px-6 lg:px-8">
+          <nav className="text-sm text-gray-600">
           <Link href="/" className="hover:text-primary-800">Home</Link>
           {' / '}
           <Link href="/engagement-rings" className="hover:text-primary-800">Engagement Rings</Link>
           {' / '}
           <span className="text-gray-900">{product.name}</span>
         </nav>
+        </div>
+      </section>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Product Images */}
-          <div>
-            <div className="aspect-square bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg mb-4 flex items-center justify-center">
-              <div className="w-64 h-64 border-4 border-primary-800 rounded-full"></div>
+      <div className="container-custom py-8 px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-12 gap-8">
+          {/* Left: Product Images */}
+          <div className="lg:col-span-5">
+            <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+              {mainImage && (
+                <Image
+                  src={mainImage}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  quality={100}
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  unoptimized={mainImage.includes('supabase.co') || mainImage.endsWith('.avif')}
+                />
+              )}
+              
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all hover:scale-110"
+                    aria-label="Previous image"
+                  >
+                    <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all hover:scale-110"
+                    aria-label="Next image"
+                  >
+                    <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
+                    {mainImageIndex + 1} / {images.length}
             </div>
+                </>
+              )}
+            </div>
+            {images.length > 1 && (
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg"></div>
+                {images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setMainImageIndex(index)}
+                    className={`aspect-square bg-gray-100 rounded-lg overflow-hidden relative hover:opacity-80 transition-opacity border-2 ${
+                      mainImageIndex === index ? 'border-gold-500' : 'border-transparent'
+                    }`}
+                  >
+                    <Image
+                      src={image}
+                      alt={`${product.name} - View ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      quality={100}
+                      sizes="(max-width: 768px) 25vw, 25vw"
+                      unoptimized={image.includes('supabase.co') || image.endsWith('.avif')}
+                    />
+                  </button>
               ))}
             </div>
+            )}
           </div>
 
-          {/* Product Info */}
-          <div>
-            <h1 className="text-4xl font-serif font-bold text-primary-900 mb-4">
+          {/* Right: Product Details & Customization */}
+          <div className="lg:col-span-7">
+            <h1 className="text-2xl font-serif font-bold text-primary-900 mb-2">
               {product.name}
             </h1>
-            <p className="text-2xl font-semibold text-primary-800 mb-6">
-              {product.price}
+            <p className="text-xl font-semibold text-primary-800 mb-4">
+              Setting Price: £{settingPrice.toLocaleString()}
             </p>
-            <p className="text-gray-700 mb-8 leading-relaxed">
+            {(selectedDiamond || (isCustomMode && customDiamond.carat)) && (
+              <p className="text-lg font-semibold text-primary-800 mb-4">
+                Diamond Price: £{diamondPrice.toLocaleString()}
+              </p>
+            )}
+            <p className="text-lg font-bold text-primary-900 mb-4">
+              Total: £{totalPrice.toLocaleString()}
+            </p>
+            {product.description && (
+              <p className="text-sm text-gray-700 mb-6 leading-relaxed">
               {product.description}
             </p>
-
-            {/* Metal Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4">Select Metal</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {product.metals.map((metal: string) => (
-                  <button
-                    key={metal}
-                    onClick={() => setSelectedMetal(metal)}
-                    className={`border-2 rounded-md px-4 py-3 text-left transition-colors ${
-                      selectedMetal === metal
-                        ? 'border-primary-800 bg-primary-50'
-                        : 'border-gray-300 hover:border-primary-800'
-                    }`}
-                  >
-                    {metal}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Diamond Shape Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4">Select Diamond Shape</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {product.diamondShapes.map((shape: string) => (
+            {diamondShapes.length > 0 && (
+              <div className="mb-4 border-b border-gray-200 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-primary-900">
+                    Diamond Shape: <span className="font-normal text-gold-500">
+                      {selections.shape ? diamondShapes.find(s => s.id === selections.shape)?.name || selections.shape : 'Select a shape'}
+                    </span>
+                  </h3>
+                  {selections.shape && isNivodaMode && (
+                    <div className="relative group">
+                      <button
+                        onClick={handleDiamondRecommendation}
+                        disabled={recommendingDiamond || availableDiamonds.length === 0}
+                        className="px-3 py-1.5 text-xs bg-primary-900 text-white rounded-md hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                      >
+                        {recommendingDiamond ? (
+                          <>
+                            <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Thinking...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <span>Choose for me</span>
+                          </>
+                        )}
+                      </button>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20 w-64">
+                        <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg">
+                          <p className="font-semibold mb-1">Let Jabour AI help you choose</p>
+                          <p className="text-gray-300">Our AI will analyse all available diamonds and recommend the best option based on quality, value, and suitability for your engagement ring.</p>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap mb-4">
+                  {diamondShapes.map((shape) => (
+                    <button
+                      key={shape.id}
+                      onClick={() => updateSelection('shape', shape.id)}
+                      className="flex flex-col items-center gap-1 transition-all group relative"
+                    >
+                      <div className="w-8 h-8 flex items-center justify-center relative">
+                        <Image
+                          src={shape.icon}
+                          alt={shape.name}
+                          width={32}
+                          height={32}
+                          className="object-contain"
+                        />
+                      </div>
+                      {selections.shape === shape.id && (
+                        <div className="w-8 h-0.5 bg-primary-900"></div>
+                      )}
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10">
+                        {shape.name}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {selections.shape && isNivodaMode && (
+                  <>
+                    <div className="mt-2 mb-4 space-y-2">
+                      <button
+                        onClick={() => {
+                          setTimeout(() => {
+                            document.getElementById('diamond-selection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }, 100)
+                        }}
+                        className="w-full bg-primary-900 hover:bg-primary-800 text-white font-semibold py-3 px-4 rounded-sm transition-colors text-sm"
+                      >
+                        SELECT DIAMOND
+                      </button>
+                    </div>
+                    {diamondRecommendation && !selectedDiamond && (
+                      <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-xs font-semibold text-primary-900 mb-0.5">
+                              Jabour Recommendation
+                            </h4>
+                            <p className="text-xs text-gray-700">
+                              {diamondRecommendation.explanation}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setDiamondRecommendation(null)}
+                            className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                            aria-label="Close recommendation"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {selectedDiamond && (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
+                        <div className="flex items-start gap-3">
+                          {selectedDiamond.diamond?.image && (
+                            <div className="w-16 h-16 flex-shrink-0 bg-white rounded overflow-hidden border border-gray-200">
+                              <Image
+                                src={selectedDiamond.diamond.image.replace('500/500', '150/150')}
+                                alt="Selected Diamond"
+                                width={150}
+                                height={150}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-primary-900 mb-1">
+                              {selectedDiamond.diamond?.certificate?.carats?.toFixed(2)}ct {selectedDiamond.diamond?.certificate?.shape || selections.shape}
+                            </p>
+                            <p className="text-xs text-gray-600 mb-1">
+                              {[
+                                selectedDiamond.diamond?.certificate?.color,
+                                selectedDiamond.diamond?.certificate?.clarity,
+                                selectedDiamond.diamond?.certificate?.cut
+                              ].filter(Boolean).join(', ')}
+                            </p>
+                            {selectedDiamond.price && (
+                              <p className="text-sm font-bold text-primary-900">
+                                £{selectedDiamond.price.toLocaleString()}
+                              </p>
+                            )}
+                            {selectedDiamond.diamond?.certificate?.lab && (
+                              <p className="text-[10px] text-gray-500 uppercase mt-1">
+                                {selectedDiamond.diamond.certificate.lab} Certified
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Diamond Selection Type Selector (only when mode is "both") */}
+            {isBothMode && selections.shape && (
+              <div className="mb-4 border-b border-gray-200 pb-4">
+                <h3 className="text-sm font-semibold text-primary-900 mb-3">
+                  Choose Diamond Selection Method
+                </h3>
+                <div className="flex gap-3">
                   <button
-                    key={shape}
-                    onClick={() => setSelectedShape(shape)}
-                    className={`border-2 rounded-md px-4 py-3 text-center transition-colors ${
-                      selectedShape === shape
-                        ? 'border-primary-800 bg-primary-50'
-                        : 'border-gray-300 hover:border-primary-800'
+                    type="button"
+                    onClick={() => {
+                      setDiamondSelectionType('nivoda')
+                      setSelections(prev => ({ ...prev, selectedDiamond: undefined }))
+                      setCustomDiamond({ carat: '', color: '', clarity: '', cut: '' })
+                    }}
+                    className={`flex-1 px-4 py-3 rounded-sm border-2 font-semibold transition-all ${
+                      diamondSelectionType === 'nivoda'
+                        ? 'border-primary-900 bg-primary-900 text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
                     }`}
                   >
-                    {shape}
+                    Select from Nivoda
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiamondSelectionType('custom')
+                      setSelections(prev => ({ ...prev, selectedDiamond: undefined }))
+                    }}
+                    className={`flex-1 px-4 py-3 rounded-sm border-2 font-semibold transition-all ${
+                      diamondSelectionType === 'custom'
+                        ? 'border-primary-900 bg-primary-900 text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                    }`}
+                  >
+                    Custom Diamond
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Diamond Selection (for custom mode) */}
+            {isCustomMode && selections.shape && (
+              <div className="mb-4 border-b border-gray-200 pb-4">
+                <h3 className="text-sm font-semibold text-primary-900 mb-4">
+                  Customize Your Diamond
+                </h3>
+                
+                {/* Carat Selection */}
+                {caratOptions.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-gray-700 mb-2">Carat Weight</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {caratOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setCustomDiamond(prev => ({ ...prev, carat: option.option_value }))}
+                          className={`px-3 py-2 rounded-sm border-2 text-sm transition-all ${
+                            customDiamond.carat === option.option_value
+                              ? 'border-primary-900 bg-primary-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                          }`}
+                        >
+                          {option.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Color Selection */}
+                {colorOptions.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-gray-700 mb-2">Color</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {colorOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setCustomDiamond(prev => ({ ...prev, color: option.option_value }))}
+                          className={`px-3 py-2 rounded-sm border-2 text-sm transition-all ${
+                            customDiamond.color === option.option_value
+                              ? 'border-primary-900 bg-primary-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                          }`}
+                        >
+                          {option.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Clarity Selection */}
+                {clarityOptions.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-gray-700 mb-2">Clarity</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {clarityOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setCustomDiamond(prev => ({ ...prev, clarity: option.option_value }))}
+                          className={`px-3 py-2 rounded-sm border-2 text-sm transition-all ${
+                            customDiamond.clarity === option.option_value
+                              ? 'border-primary-900 bg-primary-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                          }`}
+                        >
+                          {option.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cut Selection */}
+                {cutOptions.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs text-gray-700 mb-2">Cut</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {cutOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setCustomDiamond(prev => ({ ...prev, cut: option.option_value }))}
+                          className={`px-3 py-2 rounded-sm border-2 text-sm transition-all ${
+                            customDiamond.cut === option.option_value
+                              ? 'border-primary-900 bg-primary-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                          }`}
+                        >
+                          {option.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Metal Selection */}
+            {metals.length > 0 && (
+              <div className="mb-4 border-b border-gray-200 pb-4">
+                <h3 className="text-sm font-semibold text-primary-900 mb-2">
+                  Metal Colour: <span className="font-normal text-gold-500">
+                    {selectedMetal?.name || 'Select a metal'}
+                  </span>
+                </h3>
+                <div className="flex gap-1.5">
+                  {metals.map((metal) => (
+                  <button
+                      key={metal.id}
+                      onClick={() => updateSelection('metal', metal.id)}
+                      className="flex flex-col items-center gap-1 transition-all group relative"
+                      title={metal.name}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full transition-all relative overflow-hidden ${
+                          selections.metal === metal.id
+                            ? 'ring-2 ring-primary-900'
+                            : 'ring-1 ring-gray-200 hover:ring-gray-300'
+                        }`}
+                        style={{ 
+                          background: metal.metadata?.gradient || metal.metadata?.color || '#e8e8e8',
+                          boxShadow: selections.metal === metal.id 
+                            ? '0 1px 4px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.5), inset 0 -1px 2px rgba(0, 0, 0, 0.05)' 
+                            : '0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 -1px 2px rgba(0, 0, 0, 0.05)'
+                        }}
+                      >
+                        <div 
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            background: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 40%, transparent 70%)',
+                          }}
+                        />
+                      </div>
+                      {selections.metal === metal.id && (
+                        <div className="w-6 h-0.5 bg-primary-900"></div>
+                      )}
+                      <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-900 text-white text-[10px] py-0.5 px-1.5 rounded whitespace-nowrap z-10">
+                        {metal.name}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-2 border-transparent border-t-gray-900"></div>
+                      </div>
                   </button>
                 ))}
               </div>
             </div>
+            )}
 
-            {/* Actions */}
-            <div className="space-y-4 mb-8">
-              {showMessage && (
-                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md">
-                  Item added to cart!
+            {/* Band Style Selection */}
+            {bandStyles.length > 0 && (
+              <div className="mb-4 border-b border-gray-200 pb-4">
+                <h3 className="text-sm font-semibold text-primary-900 mb-2">
+                  Band Style: <span className="font-normal text-gold-500">
+                    {selectedBandStyle?.name || 'Select a style'}
+                  </span>
+                </h3>
+                <div className="flex gap-2">
+                  {bandStyles.map((style) => (
+                  <button
+                      key={style.id}
+                      onClick={() => updateSelection('bandStyle', style.id)}
+                      className={`flex flex-col items-center gap-1 p-2 border-2 rounded-lg transition-all ${
+                        selections.bandStyle === style.id
+                          ? 'border-gold-500 bg-gold-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                        <span className="text-xs text-gray-600">{style.name}</span>
+                      </div>
+                      {selections.bandStyle === style.id && (
+                        <div className="w-8 h-0.5 bg-primary-900"></div>
+                      )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            )}
+
+            {/* Ring Size Selection */}
+            {ringSizes.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-primary-900 mb-2">
+                  Ring Size: <span className="font-normal text-gold-500">
+                    {selections.ringSize || 'Select a size'}
+                  </span>
+                </h3>
+                <div className="grid grid-cols-8 gap-2">
+                  {ringSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => updateSelection('ringSize', size)}
+                      className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
+                        selections.ringSize === size
+                          ? 'border-primary-900 bg-primary-900 text-white'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
                 </div>
               )}
+
+            {/* Add to Cart Button */}
               <button
                 onClick={handleAddToCart}
-                className="btn-primary w-full text-lg py-4"
+              disabled={!selections.shape || (isCustomMode ? !customDiamond.carat || !customDiamond.color || !customDiamond.clarity || !customDiamond.cut : !selections.selectedDiamond)}
+              className="w-full bg-primary-900 hover:bg-primary-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-sm transition-colors mb-4"
               >
                 Add to Cart
               </button>
-              <button
-                onClick={handleBookAppointment}
-                className="btn-secondary w-full text-lg py-4"
-              >
-                Book Appointment to Customise
-              </button>
-            </div>
-
-            {/* Features */}
-            <div className="border-t border-gray-200 pt-8">
-              <h3 className="text-lg font-semibold mb-4">What's Included</h3>
-              <ul className="space-y-2 text-gray-700">
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-primary-800 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Lifetime Warranty
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-primary-800 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Free Ring Resizing
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-primary-800 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Certified Diamonds
-                </li>
-                <li className="flex items-center">
-                  <svg className="w-5 h-5 text-primary-800 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  40 Day Returns
-                </li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>
+
+      {/* Diamond Selection Section (for nivoda mode) */}
+      {selections.shape && isNivodaMode && (() => {
+        // Get diamond settings for current shape
+        const diamondSettings = product?.product_diamond_settings.find(
+          s => s.shape === selections.shape || (s.shape === null && !product.product_diamond_settings.some(s2 => s2.shape === selections.shape))
+        ) || product?.product_diamond_settings[0]
+        
+        return (
+        <div id="diamond-selection-section" className="mt-16 border-t border-gray-200 pt-8 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-serif font-bold text-primary-900">
+              Select Your Diamond
+            </h2>
+            {availableDiamonds.length > 0 && (
+              <button
+                onClick={handleDiamondRecommendation}
+                disabled={recommendingDiamond}
+                className="px-4 py-2 bg-primary-900 text-white rounded-md hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                title="Not sure which diamond to choose? Let our AI recommend one for you!"
+              >
+                {recommendingDiamond ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Thinking...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <span>Choose for me</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {diamondRecommendation && (
+            <div className="mb-6 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-primary-900 mb-1">
+                    Jabour Recommendation
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    {diamondRecommendation.explanation}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDiamondRecommendation(null)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                  aria-label="Close recommendation"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Layout: Filters on left, Diamonds on right */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Diamond Filters Sidebar */}
+              <div className="lg:col-span-1">
+                <div className="bg-gray-50 rounded-lg p-4 space-y-6 sticky top-4">
+                  <h3 className="text-lg font-semibold text-primary-900 mb-4">Filters</h3>
+              {/* Origin Filter */}
+              <div>
+                <label className="block text-sm font-semibold text-primary-900 mb-2">Diamond Type</label>
+                <div className="flex gap-2">
+              <button
+                    onClick={() => {
+                      setDiamondFilters(prev => ({ ...prev, origin: 'natural' }))
+                      searchDiamondsFromAPI(selections.shape, selections)
+                    }}
+                    className={`px-4 py-2 rounded-sm border-2 transition-all ${
+                      diamondFilters.origin === 'natural'
+                        ? 'border-primary-900 bg-primary-900 text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                    }`}
+                  >
+                    Natural
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDiamondFilters(prev => ({ ...prev, origin: 'lab-grown' }))
+                      searchDiamondsFromAPI(selections.shape, selections)
+                    }}
+                    className={`px-4 py-2 rounded-sm border-2 transition-all ${
+                      diamondFilters.origin === 'lab-grown'
+                        ? 'border-primary-900 bg-primary-900 text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                    }`}
+                  >
+                    Lab Grown
+              </button>
+                </div>
+            </div>
+
+              {/* Carat Weight Filter */}
+              <div>
+                <label className="block text-sm font-semibold text-primary-900 mb-2">Carat Weight</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="10.00"
+                    value={diamondFilters.minCarat ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                      setDiamondFilters(prev => ({ ...prev, minCarat: value }))
+                    }}
+                    onBlur={() => searchDiamondsFromAPI(selections.shape, selections)}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-sm text-sm"
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-600">to</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="10.00"
+                    value={diamondFilters.maxCarat ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                      setDiamondFilters(prev => ({ ...prev, maxCarat: value }))
+                    }}
+                    onBlur={() => searchDiamondsFromAPI(selections.shape, selections)}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-sm text-sm"
+                    placeholder="Max"
+                  />
+            </div>
+          </div>
+
+              {/* Color Filter */}
+              {diamondSettings?.allowed_colors && diamondSettings.allowed_colors.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-primary-900 mb-2">Colour</label>
+                  <div className="flex flex-wrap gap-2">
+                    {diamondSettings.allowed_colors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          const newColors = diamondFilters.colors.includes(color)
+                            ? diamondFilters.colors.filter(c => c !== color)
+                            : [...diamondFilters.colors, color]
+                          setDiamondFilters(prev => ({ ...prev, colors: newColors }))
+                          searchDiamondsFromAPI(selections.shape, selections)
+                        }}
+                        className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
+                          diamondFilters.colors.includes(color)
+                            ? 'border-primary-900 bg-primary-900 text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                        }`}
+                      >
+                        {color}
+                      </button>
+                    ))}
+        </div>
+      </div>
+              )}
+
+              {/* Clarity Filter */}
+              {diamondSettings?.allowed_clarities && diamondSettings.allowed_clarities.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-primary-900 mb-2">Clarity</label>
+                  <div className="flex flex-wrap gap-2">
+                    {diamondSettings.allowed_clarities.map((clarity) => (
+                      <button
+                        key={clarity}
+                        onClick={() => {
+                          const newClarities = diamondFilters.clarities.includes(clarity)
+                            ? diamondFilters.clarities.filter(c => c !== clarity)
+                            : [...diamondFilters.clarities, clarity]
+                          setDiamondFilters(prev => ({ ...prev, clarities: newClarities }))
+                          searchDiamondsFromAPI(selections.shape, selections)
+                        }}
+                        className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
+                          diamondFilters.clarities.includes(clarity)
+                            ? 'border-primary-900 bg-primary-900 text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                        }`}
+                      >
+                        {clarity}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cut Filter */}
+              {diamondSettings?.allowed_cuts && diamondSettings.allowed_cuts.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-primary-900 mb-2">Cut</label>
+                  <div className="flex flex-wrap gap-2">
+                    {diamondSettings.allowed_cuts.map((cut) => (
+                      <button
+                        key={cut}
+                        onClick={() => {
+                          const newCuts = diamondFilters.cuts.includes(cut)
+                            ? diamondFilters.cuts.filter(c => c !== cut)
+                            : [...diamondFilters.cuts, cut]
+                          setDiamondFilters(prev => ({ ...prev, cuts: newCuts }))
+                          searchDiamondsFromAPI(selections.shape, selections)
+                        }}
+                        className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
+                          diamondFilters.cuts.includes(cut)
+                            ? 'border-primary-900 bg-primary-900 text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-primary-800'
+                        }`}
+                      >
+                        {cut}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+                </div>
+              </div>
+              
+              {/* Diamonds Display Area */}
+              <div className="lg:col-span-3">
+                {/* Filters and View Controls */}
+                <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`px-4 py-2 rounded-sm border-2 transition-all ${
+                        viewMode === 'grid' ? 'border-primary-900 bg-primary-900 text-white' : 'border-gray-300'
+                      }`}
+                    >
+                      Grid
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`px-4 py-2 rounded-sm border-2 transition-all ${
+                        viewMode === 'list' ? 'border-primary-900 bg-primary-900 text-white' : 'border-gray-300'
+                      }`}
+                    >
+                      List
+                    </button>
+                  </div>
+                  
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-4 py-2 border border-gray-300 rounded-sm"
+                  >
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="carat-asc">Carat: Low to High</option>
+                    <option value="carat-desc">Carat: High to Low</option>
+                  </select>
+                </div>
+
+            {/* Diamond Grid/List */}
+            {isLoadingDiamonds && (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-900 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading diamonds...</p>
+              </div>
+            )}
+
+            {diamondError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-red-800">{diamondError}</p>
+              </div>
+            )}
+
+            {!isLoadingDiamonds && availableDiamonds.length === 0 && selections.shape && (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No diamonds found. Please try adjusting your filters.</p>
+              </div>
+            )}
+
+            {viewMode === 'grid' && availableDiamonds.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                {availableDiamonds.map((diamond) => (
+                  <button
+                    key={diamond.id}
+                    id={`diamond-${diamond.id}`}
+                    onClick={() => {
+                      updateSelection('selectedDiamond', diamond.id)
+                      setSelectedDiamondDetail(diamond)
+                    }}
+                    className={`bg-white border-2 rounded-lg overflow-hidden transition-all hover:shadow-lg ${
+                      selections.selectedDiamond === diamond.id ? 'border-primary-900' : 'border-gray-200'
+                    } ${diamondRecommendation?.diamondId === diamond.id ? 'ring-2 ring-primary-500 ring-offset-2' : ''}`}
+                  >
+                    {diamond.diamond?.image && (
+                      <div className="aspect-square bg-gray-100 relative">
+                        <Image
+                          src={diamond.diamond.image.replace('500/500', '300/300')}
+                          alt="Diamond"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="text-sm font-semibold text-primary-900 mb-1">
+                        {diamond.diamond?.certificate?.carats?.toFixed(2)}ct
+                      </p>
+                      <p className="text-xs text-gray-600 mb-2">
+                        {[
+                          diamond.diamond?.certificate?.color,
+                          diamond.diamond?.certificate?.clarity,
+                          diamond.diamond?.certificate?.cut
+                        ].filter(Boolean).join(', ')}
+                      </p>
+                      {diamond.price && (
+                        <p className="text-sm font-bold text-primary-900">
+                          £{diamond.price.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {viewMode === 'list' && availableDiamonds.length > 0 && (
+              <div className="space-y-4 mb-6">
+                {availableDiamonds.map((diamond) => (
+                  <button
+                    key={diamond.id}
+                    id={`diamond-${diamond.id}`}
+                    onClick={() => {
+                      updateSelection('selectedDiamond', diamond.id)
+                      setSelectedDiamondDetail(diamond)
+                    }}
+                    className={`w-full bg-white border-2 rounded-lg p-4 flex gap-4 transition-all hover:shadow-lg ${
+                      selections.selectedDiamond === diamond.id ? 'border-primary-900' : 'border-gray-200'
+                    } ${diamondRecommendation?.diamondId === diamond.id ? 'ring-2 ring-primary-500 ring-offset-2' : ''}`}
+                  >
+                    {diamond.diamond?.image && (
+                      <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                        <Image
+                          src={diamond.diamond.image.replace('500/500', '200/200')}
+                          alt="Diamond"
+                          width={200}
+                          height={200}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-semibold text-primary-900 mb-1">
+                        {diamond.diamond?.certificate?.carats?.toFixed(2)}ct {diamond.diamond?.certificate?.shape || selections.shape}
+                      </p>
+                      <p className="text-xs text-gray-600 mb-2">
+                        {[
+                          diamond.diamond?.certificate?.color,
+                          diamond.diamond?.certificate?.clarity,
+                          diamond.diamond?.certificate?.cut
+                        ].filter(Boolean).join(', ')}
+                      </p>
+                      {diamond.price && (
+                        <p className="text-sm font-bold text-primary-900">
+                          £{diamond.price.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+                {/* Load More Button */}
+                {/* Load More Button - Client-side pagination */}
+                {hasMoreDiamonds && !isLoadingDiamonds && (
+                  <div className="text-center">
+                    <button
+                      onClick={loadMoreDiamonds}
+                      className="px-6 py-3 bg-primary-900 hover:bg-primary-800 text-white font-semibold rounded-sm transition-colors"
+                    >
+                      Load More Diamonds ({availableDiamonds.length} of {allDiamonds.length} shown)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          )
+        })()}
+
+      {/* Diamond Details Modal */}
+      {selectedDiamondDetail && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setSelectedDiamondDetail(null)}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
+              <h3 className="text-2xl font-serif font-bold text-primary-900">Diamond Details</h3>
+              <button
+                onClick={() => setSelectedDiamondDetail(null)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {/* Jabour Recommendation Message */}
+              {diamondRecommendation && selectedDiamondDetail?.id === diamondRecommendation.diamondId && (
+                <div className="mx-6 mt-4 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-primary-900 mb-1">
+                        Jabour Recommendation
+                      </h4>
+                      <p className="text-sm text-gray-700">
+                        {diamondRecommendation.explanation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="p-6">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Diamond Image */}
+                <div className="bg-gray-100 rounded-lg aspect-square relative overflow-hidden">
+                  {selectedDiamondDetail.diamond?.image ? (
+                    <Image
+                      src={selectedDiamondDetail.diamond.image.replace('500/500', '800/800')}
+                      alt="Diamond"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-32 h-32 border-4 border-primary-800 rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Diamond Information */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-primary-900 mb-2">Specifications</h4>
+                    <div className="space-y-2 text-sm">
+                      {selectedDiamondDetail.diamond?.certificate?.carats && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Carat Weight:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.carats.toFixed(2)}ct
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.shape && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Shape:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.shape}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.color && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Color:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.color}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.clarity && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Clarity:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.clarity}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.cut && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Cut:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.cut}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.lab && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Certification Lab:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.lab}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDiamondDetail.diamond?.certificate?.certNumber && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Certificate Number:</span>
+                          <span className="font-semibold text-primary-900">
+                            {selectedDiamondDetail.diamond.certificate.certNumber}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200">
+                    {selectedDiamondDetail.price && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg text-gray-600">Price:</span>
+                        <span className="text-2xl font-bold text-primary-900">
+                          £{selectedDiamondDetail.price.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDiamondDetail.discount && selectedDiamondDetail.discount > 0 && (
+                      <div className="mt-2">
+                        <span className="text-sm text-green-600 font-semibold">
+                          Save £{selectedDiamondDetail.discount.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      onClick={() => {
+                        updateSelection('selectedDiamond', selectedDiamondDetail.id)
+                        setSelectedDiamondDetail(null)
+                      }}
+                      className="w-full px-6 py-3 bg-primary-900 hover:bg-primary-800 text-white font-semibold rounded-sm transition-colors"
+                    >
+                      Select This Diamond
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Video if available */}
+              {selectedDiamondDetail.diamond?.video && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold text-primary-900 mb-3">Diamond Video</h4>
+                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+                    <video
+                      key={selectedDiamondDetail.diamond.video}
+                      src={getProxiedVideoUrl(selectedDiamondDetail.diamond.video)}
+                      controls
+                      preload="metadata"
+                      playsInline
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLVideoElement
+                        const parent = target.parentElement
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 p-4">
+                              <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              <p class="text-sm text-center">Vídeo não disponível</p>
+                              <p class="text-xs text-gray-400 mt-1 text-center">O vídeo pode estar indisponível ou bloqueado por políticas de segurança</p>
+                            </div>
+                          `.trim()
+                        }
+                      }}
+                    >
+                      Seu navegador não suporta o elemento de vídeo.
+                    </video>
+                  </div>
+                </div>
+              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart Modal */}
+      {showCartModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCartModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-primary-900 mb-4">Added to Cart</h3>
+            <p className="text-gray-700 mb-6">Your item has been added to the cart successfully.</p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowCartModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-sm hover:bg-gray-50"
+              >
+                Continue Shopping
+              </button>
+              <button
+                onClick={() => {
+                  setShowCartModal(false)
+                  router.push('/checkout')
+                }}
+                className="flex-1 px-4 py-2 bg-primary-900 text-white rounded-sm hover:bg-primary-800"
+              >
+                View Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+export default function DynamicProductPage({ params }: ProductPageProps) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <DynamicProductContent params={params} />
+    </Suspense>
   )
 }

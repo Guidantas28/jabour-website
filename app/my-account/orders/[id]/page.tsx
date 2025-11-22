@@ -66,7 +66,6 @@ export default function OrderDetailPage() {
       
       setOrder(data)
     } catch (error) {
-      console.error('Error fetching order:', error)
       router.push('/my-account/orders')
     } finally {
       setLoading(false)
@@ -238,6 +237,13 @@ export default function OrderDetailPage() {
     </div>
   )
 }
+
+
+
+
+
+
+
 
 
 

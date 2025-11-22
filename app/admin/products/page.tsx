@@ -38,7 +38,6 @@ export default function ProductsAdminPage() {
       if (error) throw error
       setProducts(data || [])
     } catch (error) {
-      console.error('Error fetching products:', error)
     } finally {
       setLoading(false)
     }
@@ -68,7 +67,6 @@ export default function ProductsAdminPage() {
       if (error) throw error
       fetchProducts()
     } catch (error) {
-      console.error('Error deleting product:', error)
       alert('Error deleting product')
     }
   }

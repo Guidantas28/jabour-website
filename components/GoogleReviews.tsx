@@ -35,7 +35,6 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
       setRating(data.rating || 0)
       setTotalReviews(data.total_reviews || 0)
     } catch (error) {
-      console.error('Error fetching reviews:', error)
     } finally {
       setLoading(false)
     }

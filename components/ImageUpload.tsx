@@ -55,7 +55,6 @@ export default function ImageUpload({
         })
 
       if (uploadError) {
-        console.error('Upload error:', uploadError)
         throw uploadError
       }
 
@@ -68,7 +67,6 @@ export default function ImageUpload({
       setPreview(publicUrl)
       onImageUploaded(publicUrl)
     } catch (error: any) {
-      console.error('Error uploading image:', error)
       setError(error.message || 'Error uploading image')
     } finally {
       setUploading(false)

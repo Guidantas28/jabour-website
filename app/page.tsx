@@ -12,7 +12,6 @@ import {
   FaGem
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import FAQ from '@/components/FAQ'
 import GoogleReviews from '@/components/GoogleReviews'
 
@@ -60,108 +59,68 @@ export default function Home() {
 
   const fetchProducts = async () => {
     try {
-      const { data: products } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category', 'engagement-rings')
-        .order('created_at', { ascending: false })
-        .limit(4)
-
-      if (products && products.length > 0) {
-        // Check if Portman is already in the list
-        const hasPortman = products.some((p: any) => p.id === 'portman')
-        if (!hasPortman) {
-          // Add Portman to the list
-          products.push({
-            id: 'portman',
-            name: 'Portman Engagement Ring',
-            price: 'From £995',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/portman/portman-round.avif',
-            diamond_shapes: ['Round', 'Oval'],
-            style: 'solitaire',
-          })
-        }
-        // Check if Bardot is already in the list
-        const hasBardot = products.some((p: any) => p.id === 'bardot')
-        if (!hasBardot) {
-          // Add Bardot to the list
-          products.push({
-            id: 'bardot',
-            name: 'Bardot Engagement Ring',
-            price: 'From £995',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/bardot/bardot-round-platinum2.avif',
-            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
-            style: 'solitaire',
-          })
-        }
-        setRings(products)
-      } else {
-        // Fallback to Marquise Solitaire, Portman, and Bardot
-        setRings([
-          {
-            id: 'marquise-solitaire',
-            name: 'Marquise Solitaire',
-            price: 'From £1,200',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
-            diamond_shapes: ['Marquise'],
-            style: 'solitaire',
-          },
-          {
-            id: 'portman',
-            name: 'Portman Engagement Ring',
-            price: 'From £995',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/portman/portman-round.avif',
-            diamond_shapes: ['Round', 'Oval'],
-            style: 'solitaire',
-          },
-          {
-            id: 'bardot',
-            name: 'Bardot Engagement Ring',
-            price: 'From £995',
-            metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-            image: '/images/rings/bardot/bardot-round-platinum2.avif',
-            diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
-            style: 'solitaire',
-          }
-        ])
+      // Fetch products from API (same as engagement-rings page)
+      const response = await fetch(`/api/products?category=engagement-rings`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch products')
       }
+      
+      const data = await response.json()
+      const products = data.products || []
+
+      // Filter out products without slugs and remove duplicates by slug
+      const slugMap = new Map<string, any>()
+      products.forEach((p: any) => {
+        if (!p.slug || p.slug.trim() === '') {
+          return
+        }
+        if (slugMap.has(p.slug)) {
+          return
+        }
+        slugMap.set(p.slug, p)
+      })
+      
+      const validProducts = Array.from(slugMap.values())
+
+      // Process products to extract metals and format price
+      const processedRings = validProducts.slice(0, 3).map((p: any) => {
+        // Get metals from product_configurations
+        const metals = p.product_configurations
+          ?.filter((c: any) => c.configuration_type === 'metal' && c.active)
+          .sort((a: any, b: any) => {
+            // Prioritize 18k metals first
+            const aIs18k = a.configuration_value?.includes('18k') || a.display_name?.includes('18k')
+            const bIs18k = b.configuration_value?.includes('18k') || b.display_name?.includes('18k')
+            
+            if (aIs18k && !bIs18k) return -1
+            if (!aIs18k && bIs18k) return 1
+            
+            // If both are same type (both 18k or both 9k), sort by display_order
+            return a.display_order - b.display_order
+          })
+          .map((c: any) => c.display_name) || []
+
+        // Format price
+        const price = p.base_price 
+          ? `From £${p.base_price.toLocaleString()}` 
+          : 'Price on request'
+
+        return {
+          id: p.slug, // Use slug as id
+          slug: p.slug, // Keep slug explicitly
+          name: p.name,
+          price,
+          metals,
+          image: p.featured_image_url,
+        }
+      })
+
+      setRings(processedRings)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching products:', error)
-      // Fallback to Marquise Solitaire, Portman, and Bardot on error
-      setRings([
-        {
-          id: 'marquise-solitaire',
-          name: 'Marquise Solitaire',
-          price: 'From £1,200',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/marquise/marquise_1.jpg',
-          diamond_shapes: ['Marquise'],
-          style: 'solitaire',
-        },
-        {
-          id: 'portman',
-          name: 'Portman Engagement Ring',
-          price: 'From £995',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/portman/portman_1.jpg',
-          diamond_shapes: ['Round', 'Oval'],
-          style: 'solitaire',
-        },
-        {
-          id: 'bardot',
-          name: 'Bardot Engagement Ring',
-          price: 'From £995',
-          metals: ['Platinum', '18k White Gold', '18k Yellow Gold', '18k Rose Gold', '9k White Gold', '9k Yellow Gold', '9k Rose Gold'],
-          image: 'https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/bardot/bardot_1.jpg',
-          diamond_shapes: ['Round', 'Oval', 'Pear', 'Heart', 'Cushion', 'Emerald', 'Asscher', 'Radiant', 'Princess'],
-          style: 'solitaire',
-        }
-      ])
+      // Show empty state instead of fallback data
+      setRings([])
       setLoading(false)
     }
   }
@@ -434,10 +393,16 @@ export default function Home() {
             </div>
           ) : (
             <div className={`grid gap-8 ${rings.length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : rings.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : rings.length === 3 ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
-              {rings.map((ring, index) => (
+              {rings.map((ring, index) => {
+                // CRITICAL: Always use slug, never ID
+                if (!ring.slug) {
+                  return null
+                }
+                const slug = ring.slug
+                return (
                 <Link
-                  key={ring.id}
-                  href={ring.id === 'marquise-solitaire' ? '/engagement-rings/marquise-trilogy' : ring.id === 'portman' ? '/engagement-rings/portman' : ring.id === 'bardot' ? '/engagement-rings/bardot' : `/engagement-rings/${ring.id}`}
+                  key={slug}
+                  href={`/engagement-rings/${slug}`}
                   className="scroll-scale-in group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                   style={{ transitionDelay: `${index * 0.1}s` }}
                 >
@@ -469,7 +434,8 @@ export default function Home() {
                     </span>
                   </div>
                 </Link>
-              ))}
+                )
+              }).filter(Boolean)}
             </div>
           )}
         </div>
@@ -482,19 +448,30 @@ export default function Home() {
       <FAQ />
 
       {/* CTA Section */}
-      <section className="section-padding bg-primary-900 text-white">
+      <section 
+        className="section-padding text-white"
+        style={{
+          background: 'linear-gradient(135deg, #6B4F41 0%, #8B6F47 50%, #A0826D 100%)'
+        }}
+      >
         <div className="container-custom text-center">
-          <h2 className="text-4xl font-serif font-bold mb-4">
+          <h2 className="text-4xl md:text-5xl font-serif font-light mb-4 tracking-tight">
             Discover our award-winning service for yourself
           </h2>
-          <p className="text-xl mb-8 text-primary-100">
+          <p className="text-lg md:text-xl font-light text-white/90 mb-8">
             Why Choose Jabour Jewellery?
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/about" className="btn-secondary border-white text-white hover:bg-white hover:text-primary-900">
+            <Link 
+              href="/about" 
+              className="px-8 py-3 border-2 border-white text-white font-light uppercase tracking-wide transition-all hover:bg-white hover:text-[#6B4F41] rounded-sm"
+            >
               Learn More
             </Link>
-            <Link href="/book-appointment" className="btn-primary bg-white text-primary-900 hover:bg-primary-50">
+            <Link 
+              href="/book-appointment" 
+              className="px-8 py-3 bg-white text-[#6B4F41] font-light uppercase tracking-wide transition-all hover:bg-white/90 rounded-sm"
+            >
               Book Appointment
             </Link>
           </div>

@@ -13,7 +13,6 @@ export default async function BlogPage() {
     .limit(12)
   
   if (error) {
-    console.error('Error fetching blog posts:', error)
   }
 
   return (

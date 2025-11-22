@@ -171,7 +171,7 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="relative h-[600px] rounded-sm overflow-hidden shadow-xl order-2 md:order-1">
               <Image
-                src="/images/about/our-packing-jabour.png"
+                src="/images/about/our-packing-jabour.jpeg"
                 alt="Our Packaging"
                 fill
                 className="object-cover"
