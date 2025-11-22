@@ -37,7 +37,6 @@ export default function BlogAdminPage() {
         throw error
       }
       
-      console.log('Fetched posts:', data) // Debug log
       setPosts(data || [])
     } catch (error) {
       alert(`Error loading posts: ${error}`)

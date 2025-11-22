@@ -240,11 +240,8 @@ function DynamicProductContent({ params }: ProductPageProps) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        console.log('Fetching product with slug:', params.slug)
         const response = await fetch(`/api/products/${params.slug}`)
         const data = await response.json()
-        
-        console.log('API Response:', { status: response.status, ok: response.ok, data })
         
         if (!response.ok) {
           setProduct(null)
@@ -258,7 +255,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
           return
         }
         
-        console.log('Product loaded:', data.product.name)
         setProduct(data.product)
         
         // Update default selections with product data
@@ -412,13 +408,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
     try {
       // Fetch ALL diamonds by making multiple requests (API limit is 50)
       // We'll make requests until we get less than 50 results
-      console.log('🔍 Loading ALL diamonds (paginated):', {
-        shape,
-        loadMore,
-        currentDisplayed: displayedDiamondsCount,
-        allDiamondsCount: allDiamonds.length
-      })
-      
       let allDiamondsFromAPI: Diamond[] = []
       let currentOffset = 0
       const limit = 50
@@ -434,8 +423,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
           offset: currentOffset.toString(),
         })
         
-        console.log(`📤 Fetching page ${pageCount} (offset: ${currentOffset})...`)
-        
         const response = await fetch(`/api/nivoda/search?${params.toString()}`)
         
         if (!response.ok) {
@@ -445,12 +432,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
         const data = await response.json()
         const diamondsFromPage = data.diamonds || []
         
-        console.log(`📥 Page ${pageCount} received:`, {
-          diamondsReceived: diamondsFromPage.length,
-          hasMore: data.hasMore,
-          totalCount: data.total_count
-        })
-        
         // Add diamonds from this page
         allDiamondsFromAPI = [...allDiamondsFromAPI, ...diamondsFromPage]
         
@@ -458,27 +439,12 @@ function DynamicProductContent({ params }: ProductPageProps) {
         // Stop if we got less than 50 diamonds (last page) or hasMore is false
         if (diamondsFromPage.length < limit || !data.hasMore) {
           hasMore = false
-          console.log(`✅ Finished fetching. Total pages: ${pageCount}, Total diamonds: ${allDiamondsFromAPI.length}`)
         } else {
           currentOffset += limit
         }
       }
       
-      console.log('📊 All diamonds fetched:', {
-        totalPages: pageCount,
-        totalDiamonds: allDiamondsFromAPI.length
-      })
-      
       // Now process all diamonds with filters
-      console.log('📦 Processing all diamonds:', {
-        totalDiamonds: allDiamondsFromAPI.length,
-        priceRange: allDiamondsFromAPI.length > 0 ? {
-          min: Math.min(...allDiamondsFromAPI.map((d: Diamond) => d.price || 0)),
-          max: Math.max(...allDiamondsFromAPI.map((d: Diamond) => d.price || 0)),
-          first10Prices: allDiamondsFromAPI.slice(0, 10).map((d: Diamond) => d.price || 0)
-        } : null
-      })
-      
       // Use allDiamondsFromAPI as if it came from a single response
       const data = { diamonds: allDiamondsFromAPI }
       
@@ -488,12 +454,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
         return !!d.diamond?.image
       })
       
-      console.log('🖼️ Diamonds with images:', filteredDiamonds.length)
-      console.log('💰 Price range of diamonds with images:', filteredDiamonds.length > 0 ? {
-        min: Math.min(...filteredDiamonds.map((d: Diamond) => d.price || 0)),
-        max: Math.max(...filteredDiamonds.map((d: Diamond) => d.price || 0)),
-        first10Prices: filteredDiamonds.slice(0, 10).map((d: Diamond) => d.price || 0)
-      } : null)
       
       // NOTE: Origin filter (natural vs lab-grown) removed because diamondType field
       // is not available in Nivoda API response. The filter UI is still shown but
@@ -559,9 +519,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
           return priceA - priceB
         })
       
-      console.log('✅ Final filtered diamonds:', diamondsWithImages.length)
-      console.log('📊 Sample diamond:', diamondsWithImages[0])
-      
       // If no diamonds passed the filters, show all diamonds with images (less restrictive)
       // This helps debug and ensures users see results
       if (diamondsWithImages.length === 0 && filteredDiamonds.length === 0) {
@@ -587,12 +544,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
       // We'll paginate in the client by showing only a subset
       const allFilteredDiamonds = diamondsWithImages
       
-      console.log('📥 Processing response:', {
-        diamondsReceivedFromAPI: (data.diamonds || []).length,
-        diamondsAfterFilters: allFilteredDiamonds.length,
-        currentDisplayed: displayedDiamondsCount
-      })
-      
       // Store all filtered diamonds
       setAllDiamonds(allFilteredDiamonds)
       
@@ -607,13 +558,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
       
       // Set total count to the number of filtered diamonds
       setTotalDiamonds(allFilteredDiamonds.length)
-      
-      console.log('📄 Client-side pagination:', {
-        totalFiltered: allFilteredDiamonds.length,
-        displayed: initialDisplayCount,
-        hasMoreToShow,
-        totalFromAPI: allDiamondsFromAPI.length
-      })
     } catch (error: any) {
       setDiamondError(error.message || 'Failed to load diamonds. Please try again.')
     } finally {
@@ -625,14 +569,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
     // Load more from the already-fetched diamonds (client-side pagination)
     const nextCount = displayedDiamondsCount + 50
     const newDisplayed = allDiamonds.slice(0, nextCount)
-    
-    console.log('🔄 Load More (client-side):', {
-      currentDisplayed: displayedDiamondsCount,
-      allDiamondsCount: allDiamonds.length,
-      nextCount,
-      willShow: newDisplayed.length,
-      hasMore: nextCount < allDiamonds.length
-    })
     
     setDisplayedDiamondsCount(nextCount)
     setAvailableDiamonds(newDisplayed)

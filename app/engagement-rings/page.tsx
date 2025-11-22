@@ -46,8 +46,6 @@ function EngagementRingsContent() {
       const data = await response.json()
       const products = data.products || []
 
-      console.log(`Received ${products.length} products from API`)
-
       // Filter out products without slugs - CRITICAL: We need slugs for routing
       // Also ensure we only have unique products by slug
       const slugMap = new Map<string, any>()
@@ -62,7 +60,6 @@ function EngagementRingsContent() {
       })
       
       const validProducts = Array.from(slugMap.values())
-      console.log(`After deduplication: ${validProducts.length} unique products by slug`)
 
       // Process products to extract metals and shapes from configurations
       let processedProducts = validProducts.map((p: any) => {

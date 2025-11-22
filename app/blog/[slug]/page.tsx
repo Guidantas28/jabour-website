@@ -29,8 +29,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound()
   }
 
-  console.log('Post featured_image_url:', post.featured_image_url) // Debug log
-
   return (
     <div className="min-h-screen bg-white">
       {/* Breadcrumb */}

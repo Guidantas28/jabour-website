@@ -342,15 +342,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
       if (data.total_count !== undefined) {
         setTotalDiamonds(data.total_count)
       }
-      
-      console.log('📄 Pagination info:', {
-        diamondsReceivedFromAPI,
-        diamondsAfterFilters: diamondsWithImages.length,
-        currentOffset: loadMore ? diamondOffset : 0,
-        newOffset: loadMore ? diamondOffset + diamondsReceivedFromAPI : diamondsReceivedFromAPI,
-        hasMore: data.hasMore,
-        totalCount: data.total_count
-      })
     } catch (error: any) {
       setDiamondError(error.message || 'Failed to load diamonds. Please try again.')
     } finally {
@@ -1067,13 +1058,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                             </div>
                           `.trim()
                         }
-                      }}
-                      onLoadStart={() => {
-                        const proxiedUrl = getProxiedVideoUrl(selectedDiamondDetail.diamond?.video)
-                        console.log('Video loading started:', {
-                          originalUrl: selectedDiamondDetail.diamond?.video,
-                          proxiedUrl: proxiedUrl,
-                        })
                       }}
                     >
                       Seu navegador não suporta o elemento de vídeo.
