@@ -442,7 +442,7 @@ export default function Home() {
       </section>
 
       {/* Google Reviews Section */}
-      <GoogleReviews />
+      <GoogleReviews placeId={process.env.NEXT_PUBLIC_GOOGLE_PLACE_ID} />
 
       {/* FAQ Section */}
       <FAQ />
