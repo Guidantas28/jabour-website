@@ -101,9 +101,9 @@ export default function EducationPage() {
                       </div>
                     ) : (
                       topic.icon || (
-                        <div className="text-6xl text-gray-300">
-                          <FaGem />
-                        </div>
+                      <div className="text-6xl text-gray-300">
+                        <FaGem />
+                      </div>
                       )
                     )}
                   </div>

@@ -49,13 +49,62 @@ export async function GET() {
     )
 
     if (!response.ok) {
-      throw new Error('Failed to fetch reviews')
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch reviews: ${response.status} ${errorText}`)
     }
 
     const data = await response.json()
 
+    // Processar reviews da Places API (New)
+    // A estrutura da API New é diferente: text é um objeto {text: string, languageCode: string}
+    const processedReviews = (data.reviews || []).map((review: any) => {
+      // Extrair texto da review (pode ser string ou objeto {text, languageCode})
+      let reviewText = ''
+      if (typeof review.text === 'string') {
+        reviewText = review.text
+      } else if (review.text && typeof review.text === 'object' && review.text.text) {
+        reviewText = review.text.text
+      } else if (review.comment && typeof review.comment === 'string') {
+        reviewText = review.comment
+      } else if (review.comment && typeof review.comment === 'object' && review.comment.text) {
+        reviewText = review.comment.text
+      }
+
+      // Extrair nome do autor
+      let authorName = 'Anonymous'
+      if (review.authorAttribution) {
+        authorName = review.authorAttribution.displayName || review.authorAttribution.name || 'Anonymous'
+      } else if (review.author_name) {
+        authorName = review.author_name
+      }
+
+      // Extrair rating
+      const rating = review.rating || review.starRating || 0
+
+      // Extrair timestamp (pode ser publishTime ou relativePublishTimeDescription)
+      let timestamp: number | undefined
+      if (review.publishTime) {
+        // publishTime pode ser uma string ISO ou timestamp
+        const date = new Date(review.publishTime)
+        timestamp = Math.floor(date.getTime() / 1000)
+      } else if (review.time) {
+        timestamp = review.time
+      }
+
+      // Extrair relative time description
+      let relativeTime = review.relativePublishTimeDescription || review.relative_time_description
+
+      return {
+        author_name: authorName,
+        rating: rating,
+        text: reviewText,
+        time: timestamp,
+        relative_time_description: relativeTime,
+      }
+    }).filter((review: any) => review.text && review.text.length > 0) // Filtrar reviews sem texto
+
     return NextResponse.json({
-      reviews: data.reviews || [],
+      reviews: processedReviews,
       rating: data.rating || 0,
       total_reviews: data.userRatingCount || 0,
     })

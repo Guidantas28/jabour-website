@@ -227,92 +227,92 @@ export default function NewProductPage() {
             {activeTab === 'basic' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-semibold text-primary-900 mb-2">
-                      Product Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
+            <div>
+              <label htmlFor="name" className="block text-sm font-semibold text-primary-900 mb-2">
+                Product Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
                       onChange={handleBasicChange}
-                      required
-                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
-                    />
-                  </div>
+                required
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
+              />
+            </div>
 
-                  <div>
-                    <label htmlFor="slug" className="block text-sm font-semibold text-primary-900 mb-2">
-                      Slug *
-                    </label>
-                    <input
-                      type="text"
-                      id="slug"
-                      name="slug"
-                      value={formData.slug}
+            <div>
+              <label htmlFor="slug" className="block text-sm font-semibold text-primary-900 mb-2">
+                Slug *
+              </label>
+              <input
+                type="text"
+                id="slug"
+                name="slug"
+                value={formData.slug}
                       onChange={handleBasicChange}
-                      required
-                      placeholder="e.g., classic-solitaire"
-                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
-                    />
+                required
+                placeholder="e.g., classic-solitaire"
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
+              />
                   </div>
-                </div>
+            </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="category" className="block text-sm font-semibold text-primary-900 mb-2">
-                      Category *
-                    </label>
-                    <select
-                      id="category"
-                      name="category"
-                      value={formData.category}
+            <div>
+              <label htmlFor="category" className="block text-sm font-semibold text-primary-900 mb-2">
+                Category *
+              </label>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
                       onChange={handleBasicChange}
-                      required
-                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
-                    >
-                      <option value="engagement-rings">Engagement Rings</option>
-                      <option value="wedding-rings">Wedding Rings</option>
-                      <option value="jewellery">Jewellery</option>
-                    </select>
+                required
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
+              >
+                <option value="engagement-rings">Engagement Rings</option>
+                <option value="wedding-rings">Wedding Rings</option>
+                <option value="jewellery">Jewellery</option>
+              </select>
                   </div>
 
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label htmlFor="base_price" className="block text-sm font-semibold text-primary-900 mb-2">
                     Base Price (£) *
-                  </label>
-                  <input
+              </label>
+              <input
                     type="number"
                     id="base_price"
                     name="base_price"
                     value={formData.base_price}
                     onChange={handleBasicChange}
-                    required
+                required
                     min="0"
                     step="0.01"
-                    className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
-                  />
-                </div>
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
+              />
+            </div>
 
-                <div>
-                  <label htmlFor="description" className="block text-sm font-semibold text-primary-900 mb-2">
-                    Description *
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
+            <div>
+              <label htmlFor="description" className="block text-sm font-semibold text-primary-900 mb-2">
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
                     onChange={handleBasicChange}
-                    required
-                    rows={6}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
-                  />
-                </div>
+                required
+                rows={6}
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-primary-800 focus:border-primary-800"
+              />
+            </div>
 
-                <div>
+            <div>
                   <label htmlFor="diamond_selection_mode" className="block text-sm font-semibold text-primary-900 mb-2">
                     Diamond Selection Mode *
                   </label>
@@ -614,9 +614,9 @@ export default function NewProductPage() {
                         <div>
                           <label className="block text-sm font-semibold text-primary-900 mb-2">
                             Shape (optional)
-                          </label>
-                          <input
-                            type="text"
+              </label>
+              <input
+                type="text"
                             value={setting.shape}
                             onChange={(e) => updateDiamondSetting(index, 'shape', e.target.value)}
                             placeholder="e.g., round, oval"
@@ -664,21 +664,21 @@ export default function NewProductPage() {
                             step="0.01"
                             min="0"
                             className="w-full border border-gray-300 rounded-md px-4 py-2"
-                          />
-                        </div>
+              />
+            </div>
 
-                        <div>
+            <div>
                           <label className="block text-sm font-semibold text-primary-900 mb-2">
                             Allowed Colors (comma separated)
-                          </label>
-                          <input
-                            type="text"
+              </label>
+              <input
+                type="text"
                             value={setting.allowed_colors.join(', ')}
                             onChange={(e) => updateDiamondSetting(index, 'allowed_colors', e.target.value.split(',').map(c => c.trim()).filter(c => c))}
                             placeholder="e.g., D, E, F, G, H"
                             className="w-full border border-gray-300 rounded-md px-4 py-2"
-                          />
-                        </div>
+              />
+            </div>
 
                         <div>
                           <label className="block text-sm font-semibold text-primary-900 mb-2">
@@ -690,15 +690,15 @@ export default function NewProductPage() {
                             onChange={(e) => updateDiamondSetting(index, 'allowed_clarities', e.target.value.split(',').map(c => c.trim()).filter(c => c))}
                             placeholder="e.g., IF, VVS1, VVS2, VS1"
                             className="w-full border border-gray-300 rounded-md px-4 py-2"
-                          />
+            />
                         </div>
 
-                        <div>
+            <div>
                           <label className="block text-sm font-semibold text-primary-900 mb-2">
                             Allowed Cuts (comma separated)
-                          </label>
-                          <input
-                            type="text"
+              </label>
+              <input
+                type="text"
                             value={setting.allowed_cuts.join(', ')}
                             onChange={(e) => updateDiamondSetting(index, 'allowed_cuts', e.target.value.split(',').map(c => c.trim()).filter(c => c))}
                             placeholder="e.g., Excellent, Very Good"
@@ -717,8 +717,8 @@ export default function NewProductPage() {
                             step="0.01"
                             min="0"
                             className="w-full border border-gray-300 rounded-md px-4 py-2"
-                          />
-                        </div>
+              />
+            </div>
 
                         <div>
                           <label className="block text-sm font-semibold text-primary-900 mb-2">

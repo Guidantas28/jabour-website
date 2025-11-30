@@ -136,13 +136,13 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
               </div>
               
               <p className="text-gray-700 leading-relaxed mb-4 font-light">
-                "{review.text}"
+                "{typeof review.text === 'string' ? review.text : String(review.text || '')}"
               </p>
               
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <div>
                   <p className="font-semibold text-primary-900">
-                    {review.author_name}
+                    {typeof review.author_name === 'string' ? review.author_name : String(review.author_name || 'Anonymous')}
                   </p>
                   <p className="text-sm text-gray-500">
                     {formatDate(review.time)}

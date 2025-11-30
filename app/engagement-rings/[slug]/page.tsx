@@ -417,19 +417,19 @@ function DynamicProductContent({ params }: ProductPageProps) {
       // Fetch all pages until we get less than 50 results
       while (hasMore) {
         pageCount++
-        const params = new URLSearchParams({
-          shape: shape,
+      const params = new URLSearchParams({
+        shape: shape,
           limit: limit.toString(),
-          offset: currentOffset.toString(),
-        })
-        
-        const response = await fetch(`/api/nivoda/search?${params.toString()}`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to search diamonds')
-        }
-        
-        const data = await response.json()
+        offset: currentOffset.toString(),
+      })
+      
+      const response = await fetch(`/api/nivoda/search?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to search diamonds')
+      }
+      
+      const data = await response.json()
         const diamondsFromPage = data.diamonds || []
         
         // Add diamonds from this page
@@ -660,7 +660,7 @@ function DynamicProductContent({ params }: ProductPageProps) {
   }
 
   if (loading) {
-    return (
+  return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-900 mx-auto mb-4"></div>
@@ -1226,8 +1226,8 @@ function DynamicProductContent({ params }: ProductPageProps) {
         <div id="diamond-selection-section" className="mt-16 border-t border-gray-200 pt-8 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-serif font-bold text-primary-900">
-              Select Your Diamond
-            </h2>
+            Select Your Diamond
+          </h2>
             {availableDiamonds.length > 0 && (
               <button
                 onClick={handleDiamondRecommendation}
@@ -1654,8 +1654,8 @@ function DynamicProductContent({ params }: ProductPageProps) {
                   </div>
                 </div>
               )}
-              
-              <div className="p-6">
+            
+            <div className="p-6">
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 {/* Diamond Image */}
                 <div className="bg-gray-100 rounded-lg aspect-square relative overflow-hidden">
