@@ -1,139 +1,414 @@
+'use client'
+
 import Image from 'next/image'
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 export default function AboutPage() {
+  const heroRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const subtitleRef = useRef<HTMLParagraphElement>(null)
+  const dividerRef = useRef<HTMLDivElement>(null)
+  const backgroundRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  
+  const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
+  const imageRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  useEffect(() => {
+    // Smooth scroll behavior
+    if (typeof window !== 'undefined') {
+      document.documentElement.style.scrollBehavior = 'smooth'
+    }
+
+    const ctx = gsap.context(() => {
+      // Parallax effect for background
+      if (backgroundRef.current && heroRef.current) {
+        gsap.to(backgroundRef.current, {
+          y: -100,
+          scale: 1.1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 1.5,
+          },
+        })
+      }
+
+      // Subtle overlay animation
+      if (overlayRef.current) {
+        gsap.to(overlayRef.current, {
+          opacity: 0.95,
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 1,
+          },
+        })
+      }
+
+      // Hero section animations with more sophisticated effects
+      if (titleRef.current && subtitleRef.current && dividerRef.current) {
+        // Title animation with stagger for letters effect
+        gsap.from(titleRef.current, {
+          y: 80,
+          opacity: 0,
+          scale: 0.95,
+          duration: 1.4,
+          ease: 'power4.out',
+        })
+        
+        // Subtitle with fade and slide
+        gsap.from(subtitleRef.current, {
+          y: 50,
+          opacity: 0,
+          duration: 1.2,
+          delay: 0.4,
+          ease: 'power3.out',
+        })
+        
+        // Divider with scale and fade
+        gsap.from(dividerRef.current, {
+          scaleX: 0,
+          opacity: 0,
+          duration: 1,
+          delay: 0.8,
+          ease: 'power2.out',
+        })
+      }
+
+      // Section animations with ScrollTrigger
+      sectionRefs.current.forEach((section, index) => {
+        if (!section) return
+
+        const title = section.querySelector('h2')
+        const paragraphs = section.querySelectorAll('p')
+        const quote = section.querySelector('.quote-box')
+
+        if (title) {
+          gsap.from(title, {
+            y: 80,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 80%',
+              end: 'bottom 20%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+
+        if (paragraphs.length > 0) {
+          gsap.from(paragraphs, {
+            y: 50,
+            opacity: 0,
+            duration: 0.8,
+            stagger: 0.15,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 75%',
+              end: 'bottom 20%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+
+        if (quote) {
+          gsap.from(quote, {
+            scale: 0.95,
+            opacity: 0,
+            duration: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: quote,
+              start: 'top 85%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+      })
+
+      // Image parallax and reveal effects
+      imageRefs.current.forEach((imageContainer) => {
+        if (!imageContainer) return
+
+        const image = imageContainer.querySelector('img')
+
+        // Parallax effect
+        gsap.to(image, {
+          y: -50,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: imageContainer,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
+          },
+        })
+
+        // Reveal animation with scale and opacity
+        gsap.from(imageContainer, {
+          scale: 1.05,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: imageContainer,
+            start: 'top 80%',
+            toggleActions: 'play none none reverse',
+          },
+        })
+        
+        // Add subtle hover effect
+        imageContainer.addEventListener('mouseenter', () => {
+          gsap.to(image, {
+            scale: 1.05,
+            duration: 0.6,
+            ease: 'power2.out',
+          })
+        })
+        
+        imageContainer.addEventListener('mouseleave', () => {
+          gsap.to(image, {
+            scale: 1,
+            duration: 0.6,
+            ease: 'power2.out',
+          })
+        })
+      })
+
+      // CTA section animation
+      const ctaSection = document.querySelector('.cta-section')
+      if (ctaSection) {
+        const ctaTitle = ctaSection.querySelector('h2')
+        const ctaText = ctaSection.querySelector('p')
+        const ctaButtons = ctaSection.querySelectorAll('a')
+
+        if (ctaTitle) {
+          gsap.from(ctaTitle, {
+            y: 60,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: ctaSection,
+              start: 'top 80%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+
+        if (ctaText) {
+          gsap.from(ctaText, {
+            y: 40,
+            opacity: 0,
+            duration: 0.8,
+            delay: 0.2,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: ctaSection,
+              start: 'top 80%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+
+        if (ctaButtons.length > 0) {
+          gsap.from(ctaButtons, {
+            y: 30,
+            opacity: 0,
+            duration: 0.6,
+            stagger: 0.1,
+            delay: 0.4,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: ctaSection,
+              start: 'top 80%',
+              toggleActions: 'play none none reverse',
+            },
+          })
+        }
+      }
+    })
+
+    return () => ctx.revert()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-gray-50 to-white section-padding pt-32 pb-20">
-        <div className="container-custom max-w-5xl mx-auto text-center">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif font-light text-primary-900 mb-6 tracking-tight">
-            About Us
-          </h1>
-          <p className="text-2xl md:text-3xl font-serif font-light text-gold-500 italic mb-4">
-            Crafted with Vision, Guided by Emotion
-          </p>
-          <div className="w-24 h-0.5 bg-gold-500 mx-auto mt-8"></div>
-        </div>
-      </section>
-
-      {/* Some Words About Us */}
-      <section className="section-padding bg-white">
-        <div className="container-custom max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-serif font-light text-primary-900 mb-6 tracking-tight">
-              Some Words
-              <br />
-              <span className="font-normal">About Us</span>
-            </h2>
+      <section ref={heroRef} className="relative overflow-hidden min-h-[90vh] flex items-center">
+        {/* Background Image - Calçada de Ipanema with parallax */}
+        <div 
+          ref={backgroundRef}
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: 'url(/images/about/ipanema.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            willChange: 'transform',
+          }}
+        />
+        
+        {/* Gradient Overlay - more visible calçada */}
+        <div 
+          ref={overlayRef}
+          className="absolute inset-0 z-10 bg-gradient-to-b from-white/85 via-white/70 to-white/85"
+        ></div>
+        <div className="absolute inset-0 z-10 bg-gradient-to-r from-white/50 via-transparent to-white/50"></div>
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-gold-50/30 via-transparent to-transparent"></div>
+        
+        {/* Content */}
+        <div className="relative z-20 container-custom max-w-5xl mx-auto text-center w-full py-24 px-4">
+          <div className="space-y-8">
+            <h1 ref={titleRef} className="text-5xl md:text-6xl lg:text-7xl font-serif font-light text-primary-900 tracking-tight">
+              <span className="relative inline-block">
+                <span className="absolute inset-0 bg-white/40 blur-xl"></span>
+                <span className="relative">ABOUT JABOUR & CO</span>
+              </span>
+            </h1>
+            <p ref={subtitleRef} className="text-xl md:text-2xl lg:text-3xl font-serif font-light text-primary-800 italic leading-relaxed px-4">
+              A modern luxury jewellery house built on intention, craftsmanship, and clarity.
+            </p>
+            <div ref={dividerRef} className="w-32 h-px bg-gradient-to-r from-transparent via-gold-500 to-transparent mx-auto origin-center"></div>
           </div>
         </div>
       </section>
 
-      {/* Your Jewellery Brand has History */}
-      <section className="section-padding bg-white py-24">
+      {/* Main Content */}
+      <section 
+        ref={(el) => { sectionRefs.current[0] = el }}
+        className="section-padding bg-gradient-to-b from-white via-gold-50/40 to-white py-24"
+      >
         <div className="container-custom max-w-5xl mx-auto">
-          <div className="mb-12">
-            <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-4 tracking-tight">
-              Your Jewellery Brand
-              <br />
-              <span className="font-light">has History</span>
-            </h2>
-            <h3 className="text-2xl md:text-3xl font-serif font-light text-gold-500 italic mt-6 mb-8">
-              From Inspiration to Everlasting Craft:
-            </h3>
-          </div>
           <div className="space-y-6 text-gray-700 leading-relaxed text-lg font-light">
+            <p className="text-xl font-normal text-primary-900">
+              Jabour & Co was created with a simple purpose:
+            </p>
             <p className="text-xl">
-              Our jewellery defies convention fluid curves, bold settings, and deliberate forms; each piece we create challenges the expected and celebrates the exceptional. From bespoke engagement rings to sculptural wedding bands, our jewellery is shaped not by trends, but by vision.
+              to bring honesty, education, and meaningful design back into the jewellery experience.
             </p>
             <p>
-              Rooted in Brazil's rich tradition of gold and gemstone mastery, and brought to life in the heart of Hatton Garden, our work blends heritage with fearless modernity. Precision, emotion, and individuality guide every creation because luxury, to us, is not a price tag, but a principle.
+              In a world filled with overwhelming information and mass-produced pieces, we focus on what truly matters personal connection, refined craftsmanship, and a process that feels effortless and transparent.
             </p>
-            <p className="text-xl font-normal">
-              Every ring, every band, every bespoke design is an expression of enduring artistry. Made to be worn. Made to be remembered. Made for those who live beyond the ordinary.
+            <div className="pt-8 pb-4">
+              <p className="text-xl font-normal text-primary-900">
+                Every piece at Jabour begins with a story.
+              </p>
+              <p className="text-xl font-normal text-primary-900">
+                Your story.
+              </p>
+            </div>
+            <div className="w-20 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent my-6"></div>
+            <p>
+              We take the time to understand the intention behind your jewellery the moment, the meaning, the emotion — and translate it into a design that feels timeless and personal. Whether you're crafting a bespoke engagement ring, selecting a diamond, or requesting a valuation, you receive expert guidance, clear information, and a level of care that reflects the significance of your purchase.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Meet Our Founders */}
-      <section className="section-padding bg-gray-50 py-24">
-        <div className="container-custom max-w-5xl mx-auto">
+      {/* We Combine */}
+      <section 
+        ref={(el) => { sectionRefs.current[1] = el }}
+        className="section-padding bg-gradient-to-b from-gold-50/40 via-white to-gold-50/40 py-24 relative overflow-hidden"
+      >
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gold-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gold-200/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+        
+        <div className="container-custom max-w-5xl mx-auto relative z-10">
           <div className="mb-12">
-            <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-4 tracking-tight">
-              Meet Our
-              <br />
-              <span className="font-light">Founders</span>
+            <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-8 tracking-tight">
+              We combine:
             </h2>
-            <p className="text-xl md:text-2xl font-serif font-light text-gold-500 italic mt-6 mb-12 max-w-3xl">
-              Every piece begins with a feeling. Every design ends in a legacy
+          </div>
+          <div className="space-y-5 text-gray-700 leading-relaxed text-lg font-light">
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              Bespoke design
+            </p>
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              Precise craftsmanship
+            </p>
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              Luxury client experience
+            </p>
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              Ethical and responsible sourcing
+            </p>
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              Founder-led service
+            </p>
+            <p className="text-xl flex items-center gap-3">
+              <span className="w-1.5 h-1.5 bg-gold-500 rounded-full"></span>
+              U.K. artistry with international reach
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Founder Section */}
+      <section 
+        ref={(el) => { sectionRefs.current[2] = el }}
+        className="section-padding bg-gradient-to-b from-white via-primary-50/30 to-white py-24"
+      >
+        <div className="container-custom max-w-5xl mx-auto">
           <div className="space-y-6 text-gray-700 leading-relaxed text-lg font-light">
             <p>
-              We often say that Jabour & Co began long before it became a brand. It started with two dreams, his and hers that were destined to meet. He grew up in Jabour, a lively neighbourhood in Rio de Janeiro. From a young age, he was captivated by the world of jewellery, the shimmer of gemstones, the precision of craftsmanship, and the way a single piece could hold a lifetime of emotion. He always dreamed of one day bringing his passion to London, the home of fine jewellery.
-            </p>
-            <p>
-              I, on the other hand, grew up surrounded by family businesses and learned early the beauty of creating something meaningful. My heart, though, always belonged to jewellery, it was my favourite possession, my way of expressing who I am, and my reminder that love and art can live in the same form.
-            </p>
-            <p>
-              When we met, our worlds just… connected. His artistry, my love for business, and our shared admiration for jewellery naturally became part of our story. And when he designed my engagement ring, the most personal creation of all, we knew it was the beginning of something bigger. That's when the idea for Jabour was born. We wanted to create a brand that would let others feel what we felt, the joy, the love, the meaning behind every detail. A brand that could turn someone's story into something timeless.
-            </p>
-            <p>
-              From those humble beginnings, Jabour grew into an award-winning jewellery house in Brazil, known for integrity, craftsmanship, and emotion in every piece. And now, life has brought us full circle to London's prestigious Hatton Garden, where we continue to share our love, our art, and our journey with you.
+              Guided by Founder & Director Bryan Bolzan, Jabour & Co brings together years of experience in luxury retail, gemology education, bespoke creation, and the highest standards of customer care.
             </p>
             <p className="text-xl font-normal text-primary-900 pt-4">
-              For us, Jabour isn't just a brand. It's our love story, one we now have the honour of weaving into yours.
+              Our pieces are crafted to be more than accessories 
             </p>
-          </div>
-          <div className="mt-16 p-10 bg-white rounded-sm border-l-4 border-gold-500 shadow-sm">
-            <div className="flex items-start space-x-4">
-              <div className="text-6xl font-serif text-gold-500 italic leading-none mt-2">"</div>
-              <p className="text-xl font-light text-gray-700 italic leading-relaxed flex-1">
-                Our greatest wish is to bring the beauty of love into people's lives through jewellery — not just as something you wear, but as something that carries your heart. Every Jabour piece is a reflection of your story, your emotions, your love, exactly as it is.
+            <p className="text-xl font-normal text-primary-900">
+              they are symbols of commitment, milestones, and memories that last a lifetime.
+            </p>
+            <div className="pt-8 mt-8 border-t-2 border-gold-200/50">
+              <p className="text-2xl font-normal text-primary-900">
+                This is modern bridal jewellery.
+              </p>
+              <p className="text-2xl font-normal text-primary-900">
+                Clear. Personal. Intentional.
+              </p>
+              <p className="text-2xl font-normal text-gold-600">
+                This is Jabour & Co.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Our Craft & Promise */}
-      <section className="section-padding bg-white py-24">
-        <div className="container-custom max-w-5xl mx-auto">
-          <div className="mb-12">
-            <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-4 tracking-tight">
-              Our Craft
-              <br />
-              <span className="font-light">& Promise</span>
-            </h2>
-          </div>
-          <div className="space-y-6 text-gray-700 leading-relaxed text-lg font-light">
-            <p>
-              At Jabour, every piece begins with passion and precision. Each creation is handmade by our team of highly skilled artisans, whose expertise and dedication reflect the exceptional standards we believe our clients deserve.
-            </p>
-            <p>
-              Our gemstones and diamonds are individually hand-selected by our specialised team, chosen for their beauty, brilliance, and quality. From the first sketch to the final polish, every detail is crafted with care, ensuring that each piece embodies the elegance, integrity, and emotion that define Jabour.
-            </p>
-            <p>
-              Within our own workshop in the heart of Hatton Garden, our artisans bring each design to life with a level of artistry and refinement that meets our highest expectations — so that when you receive your piece, it is nothing short of perfection.
-            </p>
-            <p className="text-2xl font-normal text-primary-900 pt-6 border-t border-gray-200 mt-8">
-              At Jabour, craftsmanship is not just a process — it is a promise.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Responsible Diamond Sourcing */}
-      <section className="section-padding bg-gray-50 py-24">
+      <section 
+        ref={(el) => { sectionRefs.current[4] = el }}
+        className="section-padding bg-gradient-to-b from-gold-50/30 via-white to-gold-50/30 py-24 relative overflow-hidden"
+      >
+        {/* Decorative accent */}
+        <div className="absolute top-1/2 left-0 w-64 h-64 bg-gold-200/15 rounded-full blur-3xl -translate-y-1/2"></div>
         <div className="container-custom max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-8 tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-8 tracking-tight relative">
                 Responsible Diamond
                 <br />
                 <span className="font-light">Sourcing</span>
+                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-gold-400 via-gold-500 to-gold-400 rounded-full"></div>
               </h2>
               <div className="space-y-6 text-gray-700 leading-relaxed text-lg font-light">
                 <p>
@@ -150,7 +425,10 @@ export default function AboutPage() {
                 </p>
               </div>
             </div>
-            <div className="relative h-[600px] rounded-sm overflow-hidden shadow-xl">
+            <div 
+              ref={(el) => { imageRefs.current[0] = el }}
+              className="relative h-[600px] rounded-sm overflow-hidden shadow-xl"
+            >
               <Image
                 src="/images/about/responsible.jpeg"
                 alt="Responsible Diamond Sourcing"
@@ -166,10 +444,16 @@ export default function AboutPage() {
       </section>
 
       {/* Our Packaging */}
-      <section className="section-padding bg-white py-24">
+      <section 
+        ref={(el) => { sectionRefs.current[5] = el }}
+        className="section-padding bg-gradient-to-b from-white via-primary-50/25 to-white py-24"
+      >
         <div className="container-custom max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="relative h-[600px] rounded-sm overflow-hidden shadow-xl order-2 md:order-1">
+            <div 
+              ref={(el) => { imageRefs.current[1] = el }}
+              className="relative h-[600px] rounded-sm overflow-hidden shadow-xl order-2 md:order-1"
+            >
               <Image
                 src="/images/about/our-packing-jabour.jpeg"
                 alt="Our Packaging"
@@ -178,8 +462,9 @@ export default function AboutPage() {
               />
             </div>
             <div className="order-1 md:order-2">
-              <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-8 tracking-tight">
+              <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-8 tracking-tight relative inline-block">
                 Our Packaging
+                <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold-400 to-transparent"></div>
               </h2>
               <div className="space-y-6 text-gray-700 leading-relaxed text-lg font-light">
                 <p>
@@ -201,7 +486,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="section-padding bg-gradient-to-b from-primary-900 to-primary-800 py-24 text-white">
+      <section className="cta-section section-padding bg-gradient-to-b from-primary-900 to-primary-800 py-24 text-white">
         <div className="container-custom max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-serif font-light mb-6 tracking-tight">
             Discover Our

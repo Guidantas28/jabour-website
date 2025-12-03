@@ -48,7 +48,16 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
       const response = await fetch('/api/google-reviews')
       const data = await response.json()
       
-      setReviews(data.reviews || [])
+      // Remover duplicatas no frontend também (segurança extra)
+      const uniqueReviews = (data.reviews || []).filter((review: Review, index: number, self: Review[]) => {
+        return index === self.findIndex((r: Review) => 
+          r.author_name === review.author_name && 
+          r.text === review.text && 
+          r.time === review.time
+        )
+      })
+      
+      setReviews(uniqueReviews)
       setRating(data.rating || 0)
       setTotalReviews(data.total_reviews || 0)
     } catch (error) {
@@ -149,14 +158,6 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
                   />
                 ))}
               </div>
-              <span className="text-xl font-semibold text-primary-900">
-                {rating.toFixed(1)}
-              </span>
-              {totalReviews > 0 && (
-                <span className="text-gray-600">
-                  ({totalReviews} reviews)
-                </span>
-              )}
             </div>
           )}
           <p className="text-lg text-gray-600">
@@ -275,7 +276,7 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
         </div>
 
         {/* View All Reviews Link */}
-        {totalReviews > 0 && placeId && (
+        {placeId && (
           <div className="text-center mt-12">
             <a
               href={`https://search.google.com/local/writereview?placeid=${placeId}`}
@@ -284,7 +285,7 @@ export default function GoogleReviews({ placeId }: GoogleReviewsProps) {
               className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-white px-6 py-3 rounded-full font-semibold transition-all shadow-md hover:shadow-lg transform hover:scale-105"
             >
               <FaGoogle />
-              <span>View all {totalReviews} reviews on Google</span>
+              <span>View on Google</span>
             </a>
           </div>
         )}

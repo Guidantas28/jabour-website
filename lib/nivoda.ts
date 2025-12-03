@@ -172,51 +172,59 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     }
     
     // Build DiamondQuery according to Nivoda API documentation
-    // NO FILTERS - only shape! All other filters will be applied client-side
-    // This ensures we get all diamonds (including cheaper ones) from the API
+    // Format matches the example: shapes array, sizes array with {from, to}, has_v360, has_image, labgrown, color array
     const query: any = {
       has_image: true, // Always filter for diamonds with images
-      returns: true, // Always filter for returnable diamonds
+      has_v360: true, // Filter for diamonds with 360 video
     }
     
-    // NOTE: We removed origin filter from API - it will be filtered client-side
-    // This ensures we get all diamonds and let the user choose
+    // Add labgrown filter only if origin is specified
+    if (params.origin === 'lab-grown') {
+      query.labgrown = true
+    } else if (params.origin === 'natural') {
+      query.labgrown = false
+    }
+    // If origin is 'both' or undefined, don't include labgrown filter
     
-    if (Object.keys(filters).length > 0) {
-      // Map filters to Nivoda API format
-      if (filters.shape) {
-        // shapes should be an array according to Nivoda API
-        query.shapes = [filters.shape]
-      }
-      if (filters.carat) {
-        query.sizes = {
-          from: filters.carat.min || 0,
-          to: filters.carat.max || 30.0
-        }
-      }
-      // Color, clarity, and cut - Nivoda API may not support arrays directly
-      // Try using range format or single values only
-      // Based on error, DiamondQuality type may need a different structure
-      // For now, let's try not including these in the query and filter client-side
-      // Or use only if single value is provided
-      // NOTE: Commenting out to avoid GraphQL type errors - will filter client-side instead
-      // if (filters.color && filters.color.length > 0) {
-      //   query.color = filters.color.map(c => c.toUpperCase().trim())
-      // }
-      // if (filters.clarity && filters.clarity.length > 0) {
-      //   query.clarity = filters.clarity.map(c => c.toUpperCase().trim())
-      // }
-      // if (filters.cut && filters.cut.length > 0) {
-      //   query.cut = filters.cut.map(c => {
-      //     const upper = c.toUpperCase().trim()
-      //     return upper.replace(/\s+/g, '_')
-      //   })
-      // }
-      if (filters.price) {
-        query.dollar_value = {
-          from: filters.price.min || 0,
-          to: filters.price.max || 5000000
-        }
+    // Map filters to Nivoda API format
+    // Shape is always required and validated earlier
+    if (filters.shape) {
+      // shapes should be an array according to Nivoda API
+      query.shapes = [filters.shape]
+    }
+    
+    // Only include sizes if carat filters are provided
+    if (filters.carat && (filters.carat.min !== undefined || filters.carat.max !== undefined)) {
+      // sizes should be an array with {from, to} objects according to Nivoda API
+      query.sizes = [{
+        from: filters.carat.min || 0,
+        to: filters.carat.max || 30.0
+      }]
+    }
+    
+    // Color, clarity, and cut filters
+    if (filters.color && filters.color.length > 0) {
+      // Nivoda API expects color as an array of enum values (e.g., [D, E])
+      query.color = filters.color.map(c => c.toUpperCase().trim())
+    }
+    
+    if (filters.clarity && filters.clarity.length > 0) {
+      // Nivoda API expects clarity as an array
+      query.clarity = filters.clarity.map(c => c.toUpperCase().trim())
+    }
+    
+    if (filters.cut && filters.cut.length > 0) {
+      // Nivoda API expects cut as an array, with underscores instead of spaces
+      query.cut = filters.cut.map(c => {
+        const upper = c.toUpperCase().trim()
+        return upper.replace(/\s+/g, '_')
+      })
+    }
+    
+    if (filters.price) {
+      query.dollar_value = {
+        from: filters.price.min || 0,
+        to: filters.price.max || 5000000
       }
     }
     

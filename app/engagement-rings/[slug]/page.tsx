@@ -325,6 +325,59 @@ function DynamicProductContent({ params }: ProductPageProps) {
     }
   }, [selections.shape, product])
 
+  // Re-search diamonds when filters change (only for nivoda mode)
+  useEffect(() => {
+    if (selections.shape && product && (product.diamond_selection_mode === 'nivoda' || (product.diamond_selection_mode === 'both' && diamondSelectionType === 'nivoda'))) {
+      // Debounce filter changes to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        searchDiamondsFromAPI(selections.shape, selections)
+      }, 500) // Wait 500ms after last filter change
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [diamondFilters, product, selections.shape, diamondSelectionType])
+
+  // Apply sorting when sortBy changes
+  useEffect(() => {
+    setAllDiamonds(prevDiamonds => {
+      if (prevDiamonds.length === 0) return prevDiamonds
+
+      let sortedDiamonds = [...prevDiamonds]
+
+      switch (sortBy) {
+        case 'price-asc':
+          sortedDiamonds.sort((a, b) => (a.price || 0) - (b.price || 0))
+          break
+        case 'price-desc':
+          sortedDiamonds.sort((a, b) => (b.price || 0) - (a.price || 0))
+          break
+        case 'carat-asc':
+          sortedDiamonds.sort((a, b) => {
+            const caratA = a.diamond?.certificate?.carats || 0
+            const caratB = b.diamond?.certificate?.carats || 0
+            return caratA - caratB
+          })
+          break
+        case 'carat-desc':
+          sortedDiamonds.sort((a, b) => {
+            const caratA = a.diamond?.certificate?.carats || 0
+            const caratB = b.diamond?.certificate?.carats || 0
+            return caratB - caratA
+          })
+          break
+      }
+
+      // Update displayed diamonds with current display count
+      setDisplayedDiamondsCount(prevCount => {
+        setAvailableDiamonds(sortedDiamonds.slice(0, prevCount))
+        setHasMoreDiamonds(sortedDiamonds.length > prevCount)
+        return prevCount
+      })
+      
+      return sortedDiamonds
+    })
+  }, [sortBy])
+
   const updateSelection = (key: keyof ProductSelections, value: any) => {
     setSelections((prev) => {
       const newSelections = { ...prev, [key]: value }
@@ -392,6 +445,12 @@ function DynamicProductContent({ params }: ProductPageProps) {
     }
   }
 
+  // Helper function to normalize filter values for comparison
+  const normalizeFilterValue = (value: string | undefined | null): string => {
+    if (!value) return ''
+    return value.toUpperCase().trim().replace(/\s+/g, '')
+  }
+
   const searchDiamondsFromAPI = async (shape: string | undefined, currentSelections: ProductSelections, loadMore: boolean = false) => {
     if (!product || product.diamond_selection_mode !== 'nivoda' || !shape) return
     
@@ -407,40 +466,97 @@ function DynamicProductContent({ params }: ProductPageProps) {
     
     try {
       // Fetch ALL diamonds by making multiple requests (API limit is 50)
-      // We'll make requests until we get less than 50 results
+      // We'll use total_count to know how many requests to make
       let allDiamondsFromAPI: Diamond[] = []
       let currentOffset = 0
       const limit = 50
-      let hasMore = true
+      let totalCount: number | null = null
       let pageCount = 0
+      const maxPages = 100 // Safety limit to prevent infinite loops
       
-      // Fetch all pages until we get less than 50 results
-      while (hasMore) {
+      // Fetch all pages until we get all diamonds
+      while (pageCount < maxPages) {
         pageCount++
-      const params = new URLSearchParams({
-        shape: shape,
+        const params = new URLSearchParams({
+          shape: shape,
           limit: limit.toString(),
-        offset: currentOffset.toString(),
-      })
-      
-      const response = await fetch(`/api/nivoda/search?${params.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to search diamonds')
-      }
-      
-      const data = await response.json()
+          offset: currentOffset.toString(),
+        })
+        
+        // Add filters to API request
+        if (diamondFilters.minCarat !== undefined && diamondFilters.minCarat !== null) {
+          params.append('minCarat', diamondFilters.minCarat.toString())
+        }
+        if (diamondFilters.maxCarat !== undefined && diamondFilters.maxCarat !== null) {
+          params.append('maxCarat', diamondFilters.maxCarat.toString())
+        }
+        if (diamondFilters.minPrice !== undefined && diamondFilters.minPrice !== null && diamondFilters.minPrice > 0) {
+          params.append('minPrice', diamondFilters.minPrice.toString())
+        }
+        if (diamondFilters.maxPrice !== undefined && diamondFilters.maxPrice !== null && diamondFilters.maxPrice > 0) {
+          params.append('maxPrice', diamondFilters.maxPrice.toString())
+        }
+        // Add color filters (multiple values)
+        if (diamondFilters.colors && diamondFilters.colors.length > 0) {
+          diamondFilters.colors.forEach(color => {
+            params.append('color', color)
+          })
+        }
+        // Add clarity filters (multiple values)
+        if (diamondFilters.clarities && diamondFilters.clarities.length > 0) {
+          diamondFilters.clarities.forEach(clarity => {
+            params.append('clarity', clarity)
+          })
+        }
+        // Add cut filters (multiple values)
+        if (diamondFilters.cuts && diamondFilters.cuts.length > 0) {
+          diamondFilters.cuts.forEach(cut => {
+            params.append('cut', cut)
+          })
+        }
+        
+        const response = await fetch(`/api/nivoda/search?${params.toString()}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to search diamonds')
+        }
+        
+        const data = await response.json()
         const diamondsFromPage = data.diamonds || []
+        
+        // Store total count from first request
+        if (totalCount === null && data.total_count !== null && data.total_count !== undefined) {
+          totalCount = data.total_count
+        }
         
         // Add diamonds from this page
         allDiamondsFromAPI = [...allDiamondsFromAPI, ...diamondsFromPage]
         
-        // Check if there are more pages
-        // Stop if we got less than 50 diamonds (last page) or hasMore is false
-        if (diamondsFromPage.length < limit || !data.hasMore) {
-          hasMore = false
-        } else {
-          currentOffset += limit
+        // Check if we've fetched all diamonds
+        // Stop if:
+        // 1. We got less than the limit (last page)
+        // 2. hasMore is false
+        // 3. We've fetched all diamonds according to total_count
+        const hasMore = data.hasMore !== false && (
+          totalCount === null 
+            ? diamondsFromPage.length === limit // If no total_count, assume more if we got full limit
+            : allDiamondsFromAPI.length < totalCount // If we have total_count, check if we got all
+        )
+        
+        if (!hasMore || diamondsFromPage.length === 0) {
+          break
+        }
+        
+        currentOffset += limit
+        
+        // If we have total_count and we've fetched all, stop
+        if (totalCount !== null && allDiamondsFromAPI.length >= totalCount) {
+          break
+        }
+        
+        // Small delay to avoid overwhelming the API
+        if (pageCount < maxPages) {
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
       
@@ -463,22 +579,34 @@ function DynamicProductContent({ params }: ProductPageProps) {
       // Apply filters from user selection (diamondFilters state)
       if (diamondFilters.colors && diamondFilters.colors.length > 0) {
         filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
-          const diamondColor = d.diamond?.certificate?.color?.toUpperCase()
-          return diamondColor && diamondFilters.colors.some(c => c.toUpperCase() === diamondColor)
+          const diamondColor = normalizeFilterValue(d.diamond?.certificate?.color)
+          if (!diamondColor) return false
+          return diamondFilters.colors.some(c => {
+            const filterColor = normalizeFilterValue(c)
+            return filterColor === diamondColor
+          })
         })
       }
       
       if (diamondFilters.clarities && diamondFilters.clarities.length > 0) {
         filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
-          const diamondClarity = d.diamond?.certificate?.clarity?.toUpperCase()
-          return diamondClarity && diamondFilters.clarities.some(c => c.toUpperCase() === diamondClarity)
+          const diamondClarity = normalizeFilterValue(d.diamond?.certificate?.clarity)
+          if (!diamondClarity) return false
+          return diamondFilters.clarities.some(c => {
+            const filterClarity = normalizeFilterValue(c)
+            return filterClarity === diamondClarity
+          })
         })
       }
       
       if (diamondFilters.cuts && diamondFilters.cuts.length > 0) {
         filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
-          const diamondCut = d.diamond?.certificate?.cut?.toUpperCase().replace(/\s+/g, '_')
-          return diamondCut && diamondFilters.cuts.some(c => c.toUpperCase().replace(/\s+/g, '_') === diamondCut)
+          const diamondCut = normalizeFilterValue(d.diamond?.certificate?.cut)?.replace(/\s+/g, '_')
+          if (!diamondCut) return false
+          return diamondFilters.cuts.some(c => {
+            const filterCut = normalizeFilterValue(c)?.replace(/\s+/g, '_')
+            return filterCut === diamondCut
+          })
         })
       }
       
@@ -1296,7 +1424,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
               <button
                     onClick={() => {
                       setDiamondFilters(prev => ({ ...prev, origin: 'natural' }))
-                      searchDiamondsFromAPI(selections.shape, selections)
                     }}
                     className={`px-4 py-2 rounded-sm border-2 transition-all ${
                       diamondFilters.origin === 'natural'
@@ -1309,7 +1436,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                   <button
                     onClick={() => {
                       setDiamondFilters(prev => ({ ...prev, origin: 'lab-grown' }))
-                      searchDiamondsFromAPI(selections.shape, selections)
                     }}
                     className={`px-4 py-2 rounded-sm border-2 transition-all ${
                       diamondFilters.origin === 'lab-grown'
@@ -1336,7 +1462,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                       const value = e.target.value === '' ? undefined : parseFloat(e.target.value)
                       setDiamondFilters(prev => ({ ...prev, minCarat: value }))
                     }}
-                    onBlur={() => searchDiamondsFromAPI(selections.shape, selections)}
                     className="w-20 px-3 py-2 border border-gray-300 rounded-sm text-sm"
                     placeholder="Min"
                   />
@@ -1351,7 +1476,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                       const value = e.target.value === '' ? undefined : parseFloat(e.target.value)
                       setDiamondFilters(prev => ({ ...prev, maxCarat: value }))
                     }}
-                    onBlur={() => searchDiamondsFromAPI(selections.shape, selections)}
                     className="w-20 px-3 py-2 border border-gray-300 rounded-sm text-sm"
                     placeholder="Max"
                   />
@@ -1371,7 +1495,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                             ? diamondFilters.colors.filter(c => c !== color)
                             : [...diamondFilters.colors, color]
                           setDiamondFilters(prev => ({ ...prev, colors: newColors }))
-                          searchDiamondsFromAPI(selections.shape, selections)
                         }}
                         className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
                           diamondFilters.colors.includes(color)
@@ -1399,7 +1522,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                             ? diamondFilters.clarities.filter(c => c !== clarity)
                             : [...diamondFilters.clarities, clarity]
                           setDiamondFilters(prev => ({ ...prev, clarities: newClarities }))
-                          searchDiamondsFromAPI(selections.shape, selections)
                         }}
                         className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
                           diamondFilters.clarities.includes(clarity)
@@ -1427,7 +1549,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
                             ? diamondFilters.cuts.filter(c => c !== cut)
                             : [...diamondFilters.cuts, cut]
                           setDiamondFilters(prev => ({ ...prev, cuts: newCuts }))
-                          searchDiamondsFromAPI(selections.shape, selections)
                         }}
                         className={`px-3 py-2 rounded-sm border-2 transition-all text-sm ${
                           diamondFilters.cuts.includes(cut)

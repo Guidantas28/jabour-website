@@ -25,7 +25,7 @@ export default function Header() {
 
   const categoryNavigation = [
     { name: 'ENGAGEMENT RINGS', href: '/engagement-rings', hasDropdown: true },
-    { name: 'DIAMOND RINGS', href: '/diamonds', hasDropdown: true },
+    { name: 'DIAMOND', href: '/diamonds', hasDropdown: true },
     { name: 'WEDDING RINGS', href: '/wedding-rings', hasDropdown: false },
     { name: 'EARRINGS', href: '/jewellery/earrings', hasDropdown: false },
     { name: 'PENDANTS', href: '/jewellery/pendants', hasDropdown: false },
@@ -159,7 +159,7 @@ export default function Header() {
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
                   {item.name === 'ENGAGEMENT RINGS' && <EngagementDropdown />}
-                  {item.name === 'DIAMOND RINGS' && (
+                  {item.name === 'DIAMOND' && (
                     <div className="bg-white border border-gray-200 shadow-lg rounded-md py-2 w-48">
                       <Link href="/diamonds" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Natural Diamonds

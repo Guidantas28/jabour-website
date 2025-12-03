@@ -101,7 +101,16 @@ export async function GET() {
         time: timestamp,
         relative_time_description: relativeTime,
       }
-    }).filter((review: any) => review.text && review.text.length > 0) // Filtrar reviews sem texto
+    })
+    .filter((review: any) => review.text && review.text.length > 0) // Filtrar reviews sem texto
+    .filter((review: any, index: number, self: any[]) => {
+      // Remover duplicatas baseado em author_name + text + time
+      return index === self.findIndex((r: any) => 
+        r.author_name === review.author_name && 
+        r.text === review.text && 
+        r.time === review.time
+      )
+    })
 
     return NextResponse.json({
       reviews: processedReviews,
