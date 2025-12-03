@@ -17,7 +17,7 @@ export default function AboutPage() {
   const backgroundRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   
-  const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
+  const sectionRefs = useRef<(HTMLElement | null)[]>([])
   const imageRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {

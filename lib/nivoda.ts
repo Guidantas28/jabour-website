@@ -149,15 +149,15 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     }
     
     if (params.color && params.color.length > 0) {
-      filters.color = params.color.map(c => c.toUpperCase())
+      filters.color = params.color.map((c: string) => c.toUpperCase())
     }
     
     if (params.clarity && params.clarity.length > 0) {
-      filters.clarity = params.clarity.map(c => c.toUpperCase())
+      filters.clarity = params.clarity.map((c: string) => c.toUpperCase())
     }
     
     if (params.cut && params.cut.length > 0) {
-      filters.cut = params.cut.map(c => c.toUpperCase())
+      filters.cut = params.cut.map((c: string) => c.toUpperCase())
     }
     
     if (params.minPrice || params.maxPrice) {
@@ -205,17 +205,17 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     // Color, clarity, and cut filters
     if (filters.color && filters.color.length > 0) {
       // Nivoda API expects color as an array of enum values (e.g., [D, E])
-      query.color = filters.color.map(c => c.toUpperCase().trim())
+      query.color = filters.color.map((c: string) => c.toUpperCase().trim())
     }
     
     if (filters.clarity && filters.clarity.length > 0) {
       // Nivoda API expects clarity as an array
-      query.clarity = filters.clarity.map(c => c.toUpperCase().trim())
+      query.clarity = filters.clarity.map((c: string) => c.toUpperCase().trim())
     }
     
     if (filters.cut && filters.cut.length > 0) {
       // Nivoda API expects cut as an array, with underscores instead of spaces
-      query.cut = filters.cut.map(c => {
+      query.cut = filters.cut.map((c: string) => {
         const upper = c.toUpperCase().trim()
         return upper.replace(/\s+/g, '_')
       })

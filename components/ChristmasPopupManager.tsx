@@ -8,6 +8,11 @@ export default function ChristmasPopupManager() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') {
+      return
+    }
+
     // Mark component as mounted (client-side only)
     setMounted(true)
     
@@ -20,14 +25,17 @@ export default function ChristmasPopupManager() {
         if (submitted === 'true' || closed === 'true') {
           return
         }
-      } catch (error) {
-        // localStorage might not be available, continue anyway
-      }
 
-      // Show popup immediately after page load
-      setTimeout(() => {
-        setShowPopup(true)
-      }, 1000) // 1 second delay to ensure page is fully loaded
+        // Show popup after page load
+        setTimeout(() => {
+          setShowPopup(true)
+        }, 5000) // 5 second delay to ensure page is fully loaded
+      } catch (error) {
+        // localStorage might not be available, show popup anyway
+        setTimeout(() => {
+          setShowPopup(true)
+        }, 5000)
+      }
     }
 
     checkAndShow()
