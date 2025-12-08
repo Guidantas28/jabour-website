@@ -134,7 +134,7 @@ function DynamicProductContent({ params }: ProductPageProps) {
     maxCarat: undefined as number | undefined,
     minPrice: undefined as number | undefined,
     maxPrice: undefined as number | undefined,
-    origin: 'both' as 'natural' | 'lab-grown' | 'both',
+    origin: undefined as 'natural' | 'lab-grown' | undefined,
   })
 
   // Custom diamond selections (for custom mode)
@@ -514,6 +514,10 @@ function DynamicProductContent({ params }: ProductPageProps) {
             params.append('cut', cut)
           })
         }
+        // Add origin filter (natural or lab-grown)
+        if (diamondFilters.origin) {
+          params.append('origin', diamondFilters.origin)
+        }
         
         const response = await fetch(`/api/nivoda/search?${params.toString()}`)
         
@@ -569,12 +573,6 @@ function DynamicProductContent({ params }: ProductPageProps) {
         // Must have image
         return !!d.diamond?.image
       })
-      
-      
-      // NOTE: Origin filter (natural vs lab-grown) removed because diamondType field
-      // is not available in Nivoda API response. The filter UI is still shown but
-      // won't filter results. To enable this, we'd need to add diamondType to the
-      // GraphQL query if the API supports it, or use another field to identify origin.
       
       // Apply filters from user selection (diamondFilters state)
       if (diamondFilters.colors && diamondFilters.colors.length > 0) {
@@ -1420,10 +1418,10 @@ function DynamicProductContent({ params }: ProductPageProps) {
               {/* Origin Filter */}
               <div>
                 <label className="block text-sm font-semibold text-primary-900 mb-2">Diamond Type</label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
               <button
                     onClick={() => {
-                      setDiamondFilters(prev => ({ ...prev, origin: 'natural' }))
+                      setDiamondFilters(prev => ({ ...prev, origin: prev.origin === 'natural' ? undefined : 'natural' }))
                     }}
                     className={`px-4 py-2 rounded-sm border-2 transition-all ${
                       diamondFilters.origin === 'natural'
@@ -1435,7 +1433,7 @@ function DynamicProductContent({ params }: ProductPageProps) {
                   </button>
                   <button
                     onClick={() => {
-                      setDiamondFilters(prev => ({ ...prev, origin: 'lab-grown' }))
+                      setDiamondFilters(prev => ({ ...prev, origin: prev.origin === 'lab-grown' ? undefined : 'lab-grown' }))
                     }}
                     className={`px-4 py-2 rounded-sm border-2 transition-all ${
                       diamondFilters.origin === 'lab-grown'

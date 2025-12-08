@@ -54,7 +54,7 @@ export interface DiamondSearchParams {
   maxPrice?: number
   limit?: number
   offset?: number
-  origin?: 'natural' | 'lab-grown' | 'both' // Filter by diamond origin
+  origin?: 'natural' | 'lab-grown' // Filter by diamond origin (undefined = both)
 }
 
 // GraphQL query to search diamonds
@@ -184,7 +184,7 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     } else if (params.origin === 'natural') {
       query.labgrown = false
     }
-    // If origin is 'both' or undefined, don't include labgrown filter
+    // If origin is undefined, don't include labgrown filter (shows both types)
     
     // Map filters to Nivoda API format
     // Shape is always required and validated earlier

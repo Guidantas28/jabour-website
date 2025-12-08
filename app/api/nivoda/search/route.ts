@@ -68,9 +68,9 @@ export async function GET(request: NextRequest) {
       maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0,
-      origin: originParam === 'natural' || originParam === 'lab-grown' || originParam === 'both' 
-        ? originParam as 'natural' | 'lab-grown' | 'both'
-        : 'both', // Default to both if not specified
+      origin: originParam === 'natural' || originParam === 'lab-grown'
+        ? originParam as 'natural' | 'lab-grown'
+        : undefined, // If not specified, don't filter by origin (shows both)
     }
     
     if (!params.shape) {
