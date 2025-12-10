@@ -511,7 +511,10 @@ function DynamicProductContent({ params }: ProductPageProps) {
         // Add cut filters (multiple values)
         if (diamondFilters.cuts && diamondFilters.cuts.length > 0) {
           diamondFilters.cuts.forEach(cut => {
-            params.append('cut', cut)
+            // Only add non-empty cut values
+            if (cut && cut.trim()) {
+              params.append('cut', cut.trim())
+            }
           })
         }
         // Add origin filter (natural or lab-grown)
@@ -522,7 +525,9 @@ function DynamicProductContent({ params }: ProductPageProps) {
         const response = await fetch(`/api/nivoda/search?${params.toString()}`)
         
         if (!response.ok) {
-          throw new Error('Failed to search diamonds')
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage = errorData.error || errorData.message || `Failed to search diamonds (${response.status})`
+          throw new Error(errorMessage)
         }
         
         const data = await response.json()
@@ -598,12 +603,42 @@ function DynamicProductContent({ params }: ProductPageProps) {
       }
       
       if (diamondFilters.cuts && diamondFilters.cuts.length > 0) {
+        // Map cut quality names to Nivoda API enum values (same as in nivoda.ts)
+        const cutQualityMapping: Record<string, string> = {
+          'IDEAL': 'I',
+          'EXCELLENT': 'EX',
+          'EX': 'EX',
+          'VERY_GOOD': 'VG',
+          'VERYGOOD': 'VG',
+          'VG': 'VG',
+          'GOOD': 'G',
+          'GD': 'G',
+          'G': 'G',
+          'FAIR': 'F',
+          'FR': 'F',
+          'F': 'F',
+          'POOR': 'P',
+          'PR': 'P',
+          'P': 'P',
+        }
+        
+        const normalizeCutToEnum = (cut: string): string => {
+          const normalized = cut.toUpperCase().trim().replace(/[\s-]+/g, '_')
+          return cutQualityMapping[normalized] || normalized
+        }
+        
         filteredDiamonds = filteredDiamonds.filter((d: Diamond) => {
-          const diamondCut = normalizeFilterValue(d.diamond?.certificate?.cut)?.replace(/\s+/g, '_')
+          const diamondCut = d.diamond?.certificate?.cut
           if (!diamondCut) return false
+          
+          // API returns enum values (I, EX, VG, G, F, P), normalize to enum
+          const diamondCutEnum = normalizeCutToEnum(diamondCut)
+          
           return diamondFilters.cuts.some(c => {
-            const filterCut = normalizeFilterValue(c)?.replace(/\s+/g, '_')
-            return filterCut === diamondCut
+            // Filter values from UI (e.g., "Excellent", "Very Good") also need to be normalized
+            const filterCutEnum = normalizeCutToEnum(c)
+            // Compare enum values
+            return filterCutEnum === diamondCutEnum
           })
         })
       }
@@ -685,7 +720,13 @@ function DynamicProductContent({ params }: ProductPageProps) {
       // Set total count to the number of filtered diamonds
       setTotalDiamonds(allFilteredDiamonds.length)
     } catch (error: any) {
-      setDiamondError(error.message || 'Failed to load diamonds. Please try again.')
+      console.error('Error searching diamonds:', error)
+      const errorMessage = error.message || 'Failed to load diamonds. Please try again.'
+      setDiamondError(errorMessage)
+      // Show empty state on error
+      setAllDiamonds([])
+      setAvailableDiamonds([])
+      setTotalDiamonds(0)
     } finally {
       setIsLoadingDiamonds(false)
     }

@@ -114,6 +114,26 @@ const shapeMapping: Record<string, string> = {
   'square': 'SQUARE',
 }
 
+// Map cut quality names to Nivoda API DiamondQuality enum values
+// The API expects: I (Ideal), EX (Excellent), VG (Very Good), G (Good), F (Fair), P (Poor)
+const cutQualityMapping: Record<string, string> = {
+  'IDEAL': 'I',
+  'EXCELLENT': 'EX',
+  'EX': 'EX',
+  'VERY_GOOD': 'VG',
+  'VERYGOOD': 'VG',
+  'VG': 'VG',
+  'GOOD': 'G',
+  'GD': 'G',
+  'G': 'G',
+  'FAIR': 'F',
+  'FR': 'F',
+  'F': 'F',
+  'POOR': 'P',
+  'PR': 'P',
+  'P': 'P',
+}
+
 export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamond[]> {
   try {
     // Validate credentials
@@ -214,11 +234,36 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     }
     
     if (filters.cut && filters.cut.length > 0) {
-      // Nivoda API expects cut as an array, with underscores instead of spaces
-      query.cut = filters.cut.map((c: string) => {
-        const upper = c.toUpperCase().trim()
-        return upper.replace(/\s+/g, '_')
-      })
+      // Nivoda API expects cut as an array of DiamondQuality enum values: I, EX, VG, G, F, P
+      // Filter out empty values and map to API format
+      const validCuts = filters.cut
+        .filter((c: string) => c && c.trim())
+        .map((c: string) => {
+          // Normalize: uppercase, trim, replace spaces/hyphens with underscores
+          const normalized = c.toUpperCase().trim().replace(/[\s-]+/g, '_')
+          // Map to API enum value
+          const mappedCut = cutQualityMapping[normalized]
+          if (mappedCut) {
+            return mappedCut
+          }
+          // If already in correct format (I, EX, VG, G, F, P), use it
+          if (['I', 'EX', 'VG', 'G', 'F', 'P'].includes(normalized)) {
+            return normalized
+          }
+          // Try to find partial match (e.g., "EXCELLENT" -> "EX")
+          for (const [key, value] of Object.entries(cutQualityMapping)) {
+            if (normalized.includes(key) || key.includes(normalized)) {
+              return value
+            }
+          }
+          // Default: return normalized value (may cause error if invalid)
+          return normalized
+        })
+        .filter((c: string) => ['I', 'EX', 'VG', 'G', 'F', 'P'].includes(c)) // Only keep valid enum values
+      
+      if (validCuts.length > 0) {
+        query.cut = validCuts
+      }
     }
     
     if (filters.price) {
@@ -257,18 +302,31 @@ export async function searchDiamonds(params: DiamondSearchParams): Promise<Diamo
     const responseText = await response.text()
     
     if (!response.ok) {
-      throw new Error(`Nivoda API error (${response.status}): ${response.statusText}. ${responseText}`)
+      // Try to parse error response for more details
+      let errorDetails = responseText
+      try {
+        const errorData = JSON.parse(responseText)
+        if (errorData.errors) {
+          errorDetails = JSON.stringify(errorData.errors, null, 2)
+        } else if (errorData.message) {
+          errorDetails = errorData.message
+        }
+      } catch (e) {
+        // Keep original responseText if not JSON
+      }
+      throw new Error(`Nivoda API error (${response.status}): ${response.statusText}. ${errorDetails}`)
     }
     
     let data
     try {
       data = JSON.parse(responseText)
     } catch (e) {
-      throw new Error(`Invalid JSON response: ${responseText}`)
+      throw new Error(`Invalid JSON response: ${responseText.substring(0, 500)}`)
     }
     
     if (data.errors) {
-      throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`)
+      const errorMessages = data.errors.map((err: any) => err.message || JSON.stringify(err)).join('; ')
+      throw new Error(`GraphQL errors: ${errorMessages}`)
     }
     
     // Extract diamonds from response structure: as(token) { diamonds_by_query { items { ... }, total_count } }

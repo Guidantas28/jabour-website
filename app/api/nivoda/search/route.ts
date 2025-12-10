@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     
     // Use getAll to get all values for parameters that can have multiple values
-    const colorParams = searchParams.getAll('color')
-    const clarityParams = searchParams.getAll('clarity')
-    const cutParams = searchParams.getAll('cut')
+    const colorParams = searchParams.getAll('color').filter(c => c && c.trim())
+    const clarityParams = searchParams.getAll('clarity').filter(c => c && c.trim())
+    const cutParams = searchParams.getAll('cut').filter(c => c && c.trim())
     
     const originParam = searchParams.get('origin')
     const params: DiamondSearchParams = {
