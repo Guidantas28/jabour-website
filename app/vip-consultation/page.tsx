@@ -23,19 +23,14 @@ export default function VIPConsultationPage() {
             At Jabour, we believe that choosing your jewellery should be a truly memorable experience. Book your appointment with our experts online and we'll assist you wherever you are. If you prefer an in person consultation, we can arrange it at your most comfortable place or welcome you to our showroom for your appointment. During your appointment, you'll enjoy a personalised experience with one of our jewellery specialists, who will guide you through your chosen piece, ensuring every detail aligns with your taste and occasion.
           </p>
           
-          {/* Image Placeholder */}
-          <div className="relative h-96 md:h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-sm overflow-hidden mb-12">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-gray-400 font-light text-sm">Young couple choosing jewelry at jewelry shop</p>
-            </div>
-            {/* Quando você tiver a imagem, adicione aqui:
+          {/* Image */}
+          <div className="relative h-96 md:h-[500px] rounded-sm overflow-hidden mb-12">
             <Image
-              src="/images/vip-consultation/couple-choosing-jewelry.jpg"
+              src="https://psjxvdazipegyfwrvzul.supabase.co/storage/v1/object/public/images/blog/couple-jewelry-shop-paying-with-card.jpg"
               alt="Young couple choosing jewelry at jewelry shop"
               fill
               className="object-cover"
             />
-            */}
           </div>
         </div>
       </section>
