@@ -57,12 +57,9 @@ const shapes: DropdownItem[] = [
 ]
 
 const metals: DropdownItem[] = [
-  { name: 'Platinum', href: '/engagement-rings?metal=platinum', color: '#e5e7eb' },
-  { name: 'White Gold', href: '/engagement-rings?metal=white-gold', color: '#f9fafb' },
-  { name: 'Yellow Gold', href: '/engagement-rings?metal=yellow-gold', color: '#fbbf24' },
-  { name: 'Rose Gold', href: '/engagement-rings?metal=rose-gold', color: '#e879f9' },
-  { name: 'Silver', href: '/engagement-rings?metal=silver', color: '#d1d5db' },
-  { name: 'Mixed Metal', href: '/engagement-rings?metal=mixed-metal', color: '#9ca3af' },
+  { name: 'White Gold', href: '/engagement-rings?metal=white-gold', color: '#f0f0f0' },
+  { name: 'Yellow Gold', href: '/engagement-rings?metal=yellow-gold', color: '#ffd700' },
+  { name: 'Rose Gold', href: '/engagement-rings?metal=rose-gold', color: '#e8b4a0' },
 ]
 
 export default function EngagementDropdown() {

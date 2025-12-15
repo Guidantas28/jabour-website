@@ -2,8 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 function EngagementRingsContent() {
   const searchParams = useSearchParams()
@@ -18,6 +23,89 @@ function EngagementRingsContent() {
     shapeName: string
     explanation: string
   } | null>(null)
+
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroTitleRef = useRef<HTMLHeadingElement>(null)
+  const heroSubtitleRef = useRef<HTMLParagraphElement>(null)
+  const filtersRef = useRef<HTMLDivElement>(null)
+  const productsRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
+
+  // GSAP animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroTitleRef.current && heroSubtitleRef.current) {
+        gsap.from(heroTitleRef.current, {
+          y: 50,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroSubtitleRef.current, {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          delay: 0.3,
+          ease: 'power3.out',
+        })
+      }
+
+      // Filters section
+      if (filtersRef.current) {
+        gsap.from(filtersRef.current, {
+          y: 20,
+          opacity: 0,
+          duration: 0.6,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: filtersRef.current,
+            start: 'top 90%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+
+      // Products grid
+      if (productsRef.current && !loading && rings.length > 0) {
+        const productCards = productsRef.current.querySelectorAll('.product-card')
+        gsap.from(productCards, {
+          y: 60,
+          opacity: 0,
+          scale: 0.95,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: productsRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+
+      // CTA section
+      if (ctaRef.current) {
+        gsap.from(ctaRef.current.children, {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: ctaRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+    })
+
+    return () => ctx.revert()
+  }, [rings, loading])
 
   useEffect(() => {
     // Read query parameters from URL
@@ -117,11 +205,9 @@ function EngagementRingsContent() {
 
       if (metal) {
         const metalMap: Record<string, string> = {
-          'platinum': 'Platinum',
           'white-gold': 'White Gold',
           'yellow-gold': 'Yellow Gold',
           'rose-gold': 'Rose Gold',
-          'silver': 'Silver',
         }
         const metalName = metalMap[metal] || metal
         processedProducts = processedProducts.filter((p: any) => {
@@ -237,12 +323,12 @@ function EngagementRingsContent() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="bg-gradient-to-b from-primary-50 to-white section-padding">
+      <section ref={heroRef} className="bg-gradient-to-b from-primary-50 to-white section-padding">
         <div className="container-custom">
-          <h1 className="text-5xl font-serif font-bold text-primary-900 mb-4">
+          <h1 ref={heroTitleRef} className="text-5xl font-serif font-bold text-primary-900 mb-4">
             Engagement Rings
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl">
+          <p ref={heroSubtitleRef} className="text-xl text-gray-600 max-w-3xl">
             Discover our exquisite collection of bespoke engagement rings, crafted with precision
             and care in our Hatton Garden workshop.
           </p>
@@ -250,7 +336,7 @@ function EngagementRingsContent() {
       </section>
 
       {/* Filters */}
-      <section className="bg-white border-b border-gray-200 py-6">
+      <section ref={filtersRef} className="bg-white border-b border-gray-200 py-6">
         <div className="container-custom">
           <div className="flex flex-wrap gap-4">
             <select 
@@ -272,11 +358,9 @@ function EngagementRingsContent() {
               onChange={(e) => handleFilterChange('metal', e.target.value)}
             >
               <option value="">All Metals</option>
-              <option value="platinum">Platinum</option>
               <option value="white-gold">White Gold</option>
               <option value="yellow-gold">Yellow Gold</option>
               <option value="rose-gold">Rose Gold</option>
-              <option value="silver">Silver</option>
             </select>
             <div className="flex gap-2 items-center">
               <select 
@@ -365,7 +449,7 @@ function EngagementRingsContent() {
               </Link>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div ref={productsRef} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {rings.map((ring) => {
                 // CRITICAL: Always use slug, never ID
                 if (!ring.slug) {
@@ -376,7 +460,7 @@ function EngagementRingsContent() {
               <Link
                 key={slug}
                 href={`/engagement-rings/${slug}`}
-                className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                className="product-card group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
               >
                 <div className="h-80 bg-gray-100 relative overflow-hidden">
                   {ring.image ? (
@@ -430,7 +514,7 @@ function EngagementRingsContent() {
       </section>
 
       {/* CTA */}
-      <section className="section-padding bg-gray-50">
+      <section ref={ctaRef} className="section-padding bg-gray-50">
         <div className="container-custom text-center">
           <h2 className="text-3xl font-serif font-bold text-primary-900 mb-4">
             Can't find what you're looking for?
