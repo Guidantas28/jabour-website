@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import Map, { Marker, Popup, ViewStateChangeEvent } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 // Register ScrollTrigger plugin
 gsap.registerPlugin(ScrollTrigger)
@@ -17,8 +19,6 @@ const storeLocations = [
     phone: '+44 20 7831 1901',
     lat: 51.5194,
     lng: -0.1060,
-    mapX: 50, // Percentage from left
-    mapY: 30, // Percentage from top
   },
   {
     id: 'rio',
@@ -28,8 +28,6 @@ const storeLocations = [
     phone: '+55 21 XXXX XXXX',
     lat: -22.9848,
     lng: -43.1984,
-    mapX: 30,
-    mapY: 64,
   },
   {
     id: 'miami',
@@ -39,10 +37,30 @@ const storeLocations = [
     phone: '+1 305 XXX XXXX',
     lat: 25.8121,
     lng: -80.1918,
-    mapX: 25,
-    mapY: 40,
   },
 ]
+
+// Calculate center and bounds for all locations
+const calculateMapCenter = () => {
+  const lats = storeLocations.map(loc => loc.lat)
+  const lngs = storeLocations.map(loc => loc.lng)
+  return {
+    latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+    longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
+  }
+}
+
+// Calculate bounds for all locations
+const calculateBounds = () => {
+  const lats = storeLocations.map(loc => loc.lat)
+  const lngs = storeLocations.map(loc => loc.lng)
+  return {
+    north: Math.max(...lats),
+    south: Math.min(...lats),
+    east: Math.max(...lngs),
+    west: Math.min(...lngs),
+  }
+}
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -51,12 +69,47 @@ export default function ContactPage() {
     phone: '',
     message: '',
   })
+  const [selectedStore, setSelectedStore] = useState<string | null>(null)
+  const [viewState, setViewState] = useState({
+    ...calculateMapCenter(),
+    zoom: 2,
+  })
+  const [isMapLoaded, setIsMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
 
   const heroRef = useRef<HTMLDivElement>(null)
   const heroTitleRef = useRef<HTMLHeadingElement>(null)
   const heroSubtitleRef = useRef<HTMLParagraphElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const mapRef = useRef<any>(null)
+
+  // Get Mapbox API key
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ''
+
+  // Adjust map view when loaded
+  useEffect(() => {
+    if (isMapLoaded && mapRef.current) {
+      const bounds = calculateBounds()
+      const center = calculateMapCenter()
+      
+      // Calculate appropriate zoom level
+      const latDiff = bounds.north - bounds.south
+      const lngDiff = bounds.east - bounds.west
+      const maxDiff = Math.max(latDiff, lngDiff)
+      
+      let zoom = 2
+      if (maxDiff < 0.1) zoom = 10
+      else if (maxDiff < 0.5) zoom = 6
+      else if (maxDiff < 1) zoom = 4
+      else if (maxDiff < 5) zoom = 3
+      
+      setViewState({
+        ...center,
+        zoom,
+      })
+    }
+  }, [isMapLoaded])
 
   // GSAP animations
   useEffect(() => {
@@ -131,6 +184,42 @@ export default function ContactPage() {
     })
   }
 
+  const handleMapLoad = useCallback(() => {
+    setIsMapLoaded(true)
+    setMapError(null)
+    
+    if (mapRef.current) {
+      // @ts-ignore - getMap may not be in types
+      const map = mapRef.current.getMap ? mapRef.current.getMap() : mapRef.current
+      const bounds = calculateBounds()
+      
+      // Fit bounds to show all markers with padding
+      if (map && map.fitBounds) {
+        map.fitBounds(
+          [
+            [bounds.west, bounds.south],
+            [bounds.east, bounds.north]
+          ],
+          {
+            padding: { top: 50, bottom: 50, left: 50, right: 50 },
+            duration: 1000,
+          }
+        )
+      } else {
+        // Fallback: adjust viewState directly
+        const center = calculateMapCenter()
+        setViewState({
+          ...center,
+          zoom: 2,
+        })
+      }
+    }
+  }, [])
+
+  const handleMarkerClick = (storeId: string) => {
+    setSelectedStore(storeId)
+  }
+
   return (
     <div className="min-h-screen">
       <section ref={heroRef} className="bg-gradient-to-b from-primary-50 to-white section-padding">
@@ -155,96 +244,84 @@ export default function ContactPage() {
           </p>
           
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="w-full h-[500px] relative bg-gradient-to-br from-blue-50 via-white to-green-50">
-              {/* Interactive World Map with Pins */}
-              <div className="relative w-full h-full">
-                <svg viewBox="0 0 1000 500" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-                  {/* Simplified world map continents */}
-                  <g opacity="0.2">
-                    {/* Europe */}
-                    <path d="M 400 100 Q 450 80 500 100 Q 550 120 600 110 Q 650 100 700 120 L 700 200 L 400 200 Z" fill="#94a3b8" />
-                    {/* North America */}
-                    <path d="M 150 80 Q 200 60 250 100 Q 280 130 300 120 Q 320 110 350 140 L 350 220 L 150 220 Z" fill="#94a3b8" />
-                    {/* South America */}
-                    <path d="M 250 250 Q 280 240 300 260 Q 320 280 340 300 Q 320 350 300 380 L 250 380 Z" fill="#94a3b8" />
-                  </g>
-                  
-                  {/* Store Location Markers */}
-                  {storeLocations.map((store, index) => (
-                    <g 
-                      key={store.id}
-                      transform={`translate(${store.mapX * 10}, ${store.mapY * 5})`}
-                      className="cursor-pointer group"
-                      onClick={() => {
-                        const card = document.getElementById(`store-${store.id}`)
-                        if (card) {
-                          card.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                          card.classList.add('ring-2', 'ring-primary-900')
-                          setTimeout(() => card.classList.remove('ring-2', 'ring-primary-900'), 2000)
-                        }
-                      }}
-                    >
-                      {/* Pulse animation circle */}
-                      <circle 
-                        cx="0" 
-                        cy="0" 
-                        r="20" 
-                        fill="#dc2626" 
-                        opacity="0.2"
-                        className="animate-ping"
-                      />
-                      {/* Marker pin */}
-                      <circle 
-                        cx="0" 
-                        cy="0" 
-                        r="12" 
-                        fill="#dc2626" 
-                        stroke="white" 
-                        strokeWidth="3"
-                        className="group-hover:scale-125 transition-transform"
-                      />
-                      <circle cx="0" cy="0" r="6" fill="white" />
-                      {/* Pin line */}
-                      <line x1="0" y1="12" x2="0" y2="35" stroke="#dc2626" strokeWidth="2" />
-                      {/* Location label */}
-                      <text 
-                        x="0" 
-                        y="50" 
-                        textAnchor="middle" 
-                        className="text-sm font-bold fill-primary-900 group-hover:fill-primary-800 transition-colors"
-                        style={{ fontSize: '14px', fontWeight: 'bold' }}
-                      >
-                        {store.name}
-                      </text>
-                    </g>
-                  ))}
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Store Locations Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mt-8">
-            {storeLocations.map((store) => (
-              <div 
-                key={store.id}
-                id={`store-${store.id}`}
-                className="bg-white rounded-lg shadow-md p-6 content-item transition-all hover:shadow-lg hover:scale-105"
-              >
-                <h3 className="text-xl font-serif font-bold text-primary-900 mb-3">{store.name}</h3>
-                <p className="text-gray-700 mb-2">{store.address}</p>
-                <p className="text-gray-700 mb-2">{store.city}</p>
-                <p className="text-gray-700 mb-4">Phone: {store.phone}</p>
-                <a 
-                  href={`https://maps.google.com/?q=${encodeURIComponent(store.address + ' ' + store.city)}`}
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-primary-800 hover:text-primary-900 font-medium inline-flex items-center gap-1"
+            {mapboxToken ? (
+              <div className="w-full h-[500px] relative">
+                <Map
+                  {...viewState}
+                  onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
+                  mapboxAccessToken={mapboxToken}
+                  style={{ width: '100%', height: '100%' }}
+                  mapStyle="mapbox://styles/mapbox/light-v11"
+                  onLoad={handleMapLoad}
+                  ref={mapRef}
+                  attributionControl={false}
                 >
-                  View on Map →
-                </a>
+                  {storeLocations.map((store) => (
+                    <div key={store.id}>
+                      <Marker
+                        longitude={store.lng}
+                        latitude={store.lat}
+                        anchor="bottom"
+                        onClick={() => handleMarkerClick(store.id)}
+                      >
+                        <div className="cursor-pointer">
+                          <div className="relative">
+                            <div className="absolute -top-2 -left-2 w-6 h-6 bg-red-600 rounded-full animate-ping opacity-75"></div>
+                            <div className="relative w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </Marker>
+                      {selectedStore === store.id && (
+                        <Popup
+                          longitude={store.lng}
+                          latitude={store.lat}
+                          anchor="bottom"
+                          onClose={() => setSelectedStore(null)}
+                          closeButton={true}
+                          closeOnClick={false}
+                          className="mapbox-popup"
+                        >
+                          <div className="p-3 max-w-xs">
+                            <h3 className="font-bold text-primary-900 mb-2 text-lg">{store.name}</h3>
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-700">{store.address}</p>
+                              <p className="text-sm text-gray-700">{store.city}</p>
+                              <p className="text-sm text-gray-700 font-medium mt-2">{store.phone}</p>
+                            </div>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.address + ' ' + store.city)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block mt-3 text-sm text-primary-800 hover:text-primary-900 font-medium"
+                            >
+                              Ver no Google Maps →
+                            </a>
+                          </div>
+                        </Popup>
+                      )}
+                    </div>
+                  ))}
+                </Map>
               </div>
-            ))}
+            ) : (
+              <div className="w-full h-[500px] flex items-center justify-center bg-gray-100 rounded-lg">
+                <div className="text-center p-6">
+                  <p className="text-gray-600 mb-2">
+                    Mapbox Access Token não configurado
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Por favor, configure NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN no arquivo .env
+                  </p>
+                </div>
+              </div>
+            )}
+            {mapError && (
+              <div className="p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
+                <p className="text-sm">{mapError}</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
