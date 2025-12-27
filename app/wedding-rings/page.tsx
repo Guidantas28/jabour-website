@@ -1,4 +1,12 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 export default function WeddingRingsPage() {
   const rings = [
@@ -28,21 +36,88 @@ export default function WeddingRingsPage() {
     },
   ]
 
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroTitleRef = useRef<HTMLHeadingElement>(null)
+  const heroSubtitleRef = useRef<HTMLParagraphElement>(null)
+  const filtersRef = useRef<HTMLDivElement>(null)
+  const ringsRef = useRef<HTMLDivElement>(null)
+
+  // GSAP animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroTitleRef.current && heroSubtitleRef.current) {
+        gsap.from(heroTitleRef.current, {
+          y: 50,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroSubtitleRef.current, {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          delay: 0.3,
+          ease: 'power3.out',
+        })
+      }
+
+      // Filters section
+      if (filtersRef.current) {
+        gsap.from(filtersRef.current.children, {
+          y: 20,
+          opacity: 0,
+          duration: 0.6,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: filtersRef.current,
+            start: 'top 90%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+
+      // Rings grid
+      if (ringsRef.current) {
+        const ringCards = ringsRef.current.querySelectorAll('.ring-card')
+        gsap.from(ringCards, {
+          y: 60,
+          opacity: 0,
+          scale: 0.95,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: ringsRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+    })
+
+    return () => ctx.revert()
+  }, [])
+
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-b from-primary-50 to-white section-padding">
+      <section ref={heroRef} className="bg-gradient-to-b from-primary-50 to-white section-padding">
         <div className="container-custom">
-          <h1 className="text-5xl font-serif font-bold text-primary-900 mb-4">
+          <h1 ref={heroTitleRef} className="text-5xl font-serif font-bold text-primary-900 mb-4">
             Wedding Rings
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl">
+          <p ref={heroSubtitleRef} className="text-xl text-gray-600 max-w-3xl">
             Discover our beautiful collection of wedding rings for him and her, crafted to complement
             your engagement ring perfectly.
           </p>
         </div>
       </section>
 
-      <section className="bg-white border-b border-gray-200 py-6">
+      <section ref={filtersRef} className="bg-white border-b border-gray-200 py-6">
         <div className="container-custom">
           <div className="flex gap-4">
             <Link href="/wedding-rings" className="font-semibold text-primary-900 border-b-2 border-primary-900 pb-2">
@@ -63,12 +138,12 @@ export default function WeddingRingsPage() {
 
       <section className="section-padding bg-white">
         <div className="container-custom">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div ref={ringsRef} className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {rings.map((ring) => (
               <Link
                 key={ring.id}
                 href={`/wedding-rings/${ring.id}`}
-                className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                className="ring-card group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
               >
                 <div className="h-64 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
                   <div className="w-24 h-24 border-4 border-primary-800 rounded-full"></div>

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
     const includeInactive = searchParams.get('includeInactive') === 'true'
+    const searchQuery = searchParams.get('q') || searchParams.get('search')
 
     // CRITICAL: Select distinct products by slug to avoid duplicates
     let query = supabase
@@ -45,6 +46,13 @@ export async function GET(request: NextRequest) {
 
     if (!includeInactive) {
       query = query.eq('active', true)
+    }
+
+    // Add search functionality - search in name, description, and slug
+    if (searchQuery && searchQuery.trim()) {
+      const searchTerm = searchQuery.trim()
+      // PostgREST uses * for wildcards in or() method
+      query = query.or(`name.ilike.*${searchTerm}*,description.ilike.*${searchTerm}*,slug.ilike.*${searchTerm}*`)
     }
 
     const { data, error } = await query

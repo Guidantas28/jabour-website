@@ -1,6 +1,14 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { FaGem, FaCircle, FaCertificate, FaFlask, FaMedal } from 'react-icons/fa'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 const educationTopics = [
   {
@@ -54,30 +62,132 @@ const educationTopics = [
 ]
 
 export default function EducationPage() {
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroTitleRef = useRef<HTMLHeadingElement>(null)
+  const heroSubtitleRef = useRef<HTMLParagraphElement>(null)
+  const heroDividerRef = useRef<HTMLDivElement>(null)
+  const topicsRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
+
+  // GSAP animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroTitleRef.current && heroSubtitleRef.current && heroDividerRef.current) {
+        gsap.from(heroTitleRef.current, {
+          y: 60,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroSubtitleRef.current, {
+          y: 40,
+          opacity: 0,
+          duration: 1,
+          delay: 0.3,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroDividerRef.current, {
+          scaleX: 0,
+          opacity: 0,
+          duration: 0.8,
+          delay: 0.6,
+          ease: 'power2.out',
+        })
+      }
+
+      // Topics grid
+      if (topicsRef.current) {
+        const topicCards = topicsRef.current.querySelectorAll('.topic-card')
+        
+        if (topicCards.length > 0) {
+          // Use requestAnimationFrame to ensure DOM is ready
+          requestAnimationFrame(() => {
+            // Check if section is already visible
+            const rect = topicsRef.current?.getBoundingClientRect()
+            const isVisible = rect && rect.top < window.innerHeight * 0.9
+            
+            if (isVisible) {
+              // If already visible, just set to final state
+              gsap.set(topicCards, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+              })
+            } else {
+              // If not visible, set initial state and animate on scroll
+              gsap.set(topicCards, {
+                opacity: 0,
+                y: 80,
+                scale: 0.9,
+              })
+              
+              gsap.to(topicCards, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.9,
+                stagger: 0.1,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: topicsRef.current,
+                  start: 'top 85%',
+                  toggleActions: 'play none none none',
+                },
+              })
+            }
+          })
+        }
+      }
+
+      // CTA section
+      if (ctaRef.current) {
+        gsap.from(ctaRef.current.children, {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: ctaRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+    })
+
+    return () => ctx.revert()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-gray-50 to-white section-padding pt-32 pb-20">
+      <section ref={heroRef} className="relative bg-gradient-to-b from-gray-50 to-white section-padding pt-32 pb-20">
         <div className="container-custom max-w-5xl mx-auto text-center">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif font-light text-primary-900 mb-6 tracking-tight">
+          <h1 ref={heroTitleRef} className="text-6xl md:text-7xl lg:text-8xl font-serif font-light text-primary-900 mb-6 tracking-tight">
             Education
           </h1>
-          <p className="text-lg md:text-xl font-light text-gray-700 mb-4 leading-relaxed max-w-3xl mx-auto">
+          <p ref={heroSubtitleRef} className="text-lg md:text-xl font-light text-gray-700 mb-4 leading-relaxed max-w-3xl mx-auto">
             Choosing the perfect engagement ring for your partner is a thrilling experience but can also feel quite daunting to begin with. Don't panic, the perfect engagement ring is here waiting for you, and our engagement ring buying guide will help you on your journey to the perfect diamond ring.
           </p>
-          <div className="w-24 h-0.5 bg-gold-500 mx-auto mt-8"></div>
+          <div ref={heroDividerRef} className="w-24 h-0.5 bg-gold-500 mx-auto mt-8"></div>
         </div>
       </section>
 
       {/* Topics Grid */}
       <section className="section-padding bg-white py-24">
         <div className="container-custom max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div ref={topicsRef} className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {educationTopics.map((topic) => (
               <Link
                 key={topic.id}
                 href={`/education/${topic.id}`}
-                className="group relative bg-white border border-gray-200 rounded-sm overflow-hidden hover:shadow-xl transition-all duration-300 hover:border-gold-500"
+                className="topic-card group relative bg-white border border-gray-200 rounded-sm overflow-hidden hover:shadow-xl transition-all duration-300 hover:border-gold-500"
               >
                 <div className="aspect-square p-8 flex flex-col items-center justify-center">
                   {/* Image placeholder or icon */}
@@ -119,7 +229,7 @@ export default function EducationPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="section-padding bg-gray-50 py-16">
+      <section ref={ctaRef} className="section-padding bg-gray-50 py-16">
         <div className="container-custom max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-serif font-light text-primary-900 mb-6 tracking-tight">
             Still Have Questions?

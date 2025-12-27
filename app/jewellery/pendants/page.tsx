@@ -3,17 +3,17 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 
-function PendantsContent() {
+function NecklacesContent() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
       <section className="bg-gradient-to-b from-primary-50 to-white section-padding">
         <div className="container-custom">
           <h1 className="text-5xl font-serif font-bold text-primary-900 mb-4">
-            Pendants
+            Necklaces
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl">
-            Discover our exquisite collection of bespoke pendants, crafted with precision
+            Discover our exquisite collection of bespoke necklaces, crafted with precision
             and care in our Hatton Garden workshop.
           </p>
         </div>
@@ -23,7 +23,7 @@ function PendantsContent() {
       <section className="section-padding bg-white">
         <div className="container-custom text-center py-12">
           <p className="text-lg text-gray-600 mb-8">
-            Our pendants collection is coming soon.
+            Our necklaces collection is coming soon.
           </p>
           <Link href="/book-appointment" className="btn-primary">
             Book Appointment
@@ -49,14 +49,14 @@ function PendantsContent() {
   )
 }
 
-export default function PendantsPage() {
+export default function NecklacesPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-600">Loading...</p>
       </div>
     }>
-      <PendantsContent />
+      <NecklacesContent />
     </Suspense>
   )
 }

@@ -394,15 +394,17 @@ export default function TopicPage({ params }: TopicPageProps) {
                   key={shape.id}
                   className="bg-white rounded-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all hover:border-gold-500"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden p-8">
-                    <Image
-                      src={shape.image}
-                      alt={shape.name}
-                      fill
-                      className="object-contain"
-                      quality={95}
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                    />
+                  <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+                    <div className="absolute inset-4 sm:inset-6 md:inset-8">
+                      <Image
+                        src={shape.image}
+                        alt={shape.name}
+                        fill
+                        className="object-contain"
+                        quality={100}
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                      />
+                    </div>
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-serif font-normal text-primary-900 mb-3">
@@ -618,20 +620,53 @@ export default function TopicPage({ params }: TopicPageProps) {
             </div>
           ) : params.topic === 'cut' ? (
             <div className="space-y-12">
-              {/* Introduction Section */}
+              {/* What Is Diamond Cut Section */}
               <div className="bg-white rounded-sm border border-gray-200 p-12">
-                <div className="space-y-6 text-gray-700 leading-relaxed font-light text-lg max-w-4xl mx-auto">
+                <h2 className="text-3xl font-serif font-normal text-primary-900 mb-6">
+                  What Is Diamond Cut?
+                </h2>
+                <div className="space-y-6 text-gray-700 leading-relaxed font-light text-lg max-w-4xl">
                   <p>
-                    If you purchase a badly cut diamond then it will not refract the light as well and will not sparkle. Poorly cut diamonds will also give you a smaller spread for your selected carat weight.
+                    Cut is determined by symmetry, proportion and polish. More than any other factor, cut determines the beauty of the stone. Tiffany diamonds, from the smallest to the largest stone, are always cut to prioritise brilliance over carat weight.
                   </p>
                   <p>
-                    Cut grades were developed by the GIA (Gemological Institute of America) during the 1940's and 1950's to enable independent labs to not only evaluate clarity and colour, but to check the structure of the diamond itself. For example, a round brilliant cut diamond will have 57 or 58 facets, which are precisely cut and defined.
+                    Diamond cut is often interchanged with diamond shape; however, they refer to different things. The most important of the 4Cs, cut refers to how a diamond's facets interact with light, whereas diamond shape refers to the geometric appearance of a diamond.
+                  </p>
+                </div>
+              </div>
+
+              {/* Why Is Diamond Cut Important Section */}
+              <div className="bg-white rounded-sm border border-gray-200 p-12">
+                <h2 className="text-3xl font-serif font-normal text-primary-900 mb-6">
+                  Why Is Diamond Cut Important?
+                </h2>
+                <div className="space-y-6 text-gray-700 leading-relaxed font-light text-lg max-w-4xl">
+                  <p>
+                    Diamond cut is what determines how much a diamond sparkles. Even a stone with excellent colour and clarity can appear lifeless if it is poorly cut. When a diamond is cut correctly, light enters the stone, reflects internally, and returns to the eye with exceptional brightness, fire, and brilliance.
                   </p>
                   <p>
-                    While these are miniature in size, they are extremely important as they govern how well the diamond is going to sparkle.
+                    At Jabour & Co, cut is never compromised. Every diamond we select is carefully assessed for balance, symmetry, and light performance, ensuring it delivers maximum brilliance for its size. Our approach focuses on craftsmanship and precision rather than chasing numbers on a certificate.
                   </p>
                   <p>
-                    It is important to ensure you select a well-cut diamond so that you get a good sparkle. You may be able to save a lot of money on poorer cut diamonds, but ultimately you will pay with a diamond that does not sparkle and lacks lustre.
+                    This attention to cut is what separates an ordinary diamond from one that truly comes alive and ensures your ring remains as captivating decades from now as it is on the day it's given.
+                  </p>
+                </div>
+              </div>
+
+              {/* Jabour & Co Diamonds Section */}
+              <div className="bg-white rounded-sm border border-gray-200 p-12">
+                <h2 className="text-3xl font-serif font-normal text-primary-900 mb-6">
+                  Jabour & Co Diamonds
+                </h2>
+                <div className="space-y-6 text-gray-700 leading-relaxed font-light text-lg max-w-4xl">
+                  <p>
+                    While many jewellers accept a wide range of cut grades, Jabour & Co applies a far more selective standard. We do not rely solely on labels each diamond is assessed individually for its proportions, symmetry, and overall light performance before it is approved for our collections.
+                  </p>
+                  <p>
+                    Diamonds that are cut too deep or too shallow allow light to escape through the sides or base of the stone, reducing brilliance and sparkle. Likewise, poorly aligned facets disrupt the flow of light, resulting in a diamond that appears dull or lifeless, regardless of its other grades.
+                  </p>
+                  <p>
+                    At Jabour & Co, only diamonds that demonstrate exceptional balance and optical performance are selected for our engagement and bridal pieces. Our gemmological standards apply to individually chosen diamonds, carefully matched to specific designs to ensure each ring performs beautifully in real life  not just on paper.
                   </p>
                 </div>
               </div>

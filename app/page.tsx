@@ -11,50 +11,135 @@ import {
   FaUndo,
   FaGem
 } from 'react-icons/fa'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import FAQ from '@/components/FAQ'
 import GoogleReviews from '@/components/GoogleReviews'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 export default function Home() {
   const [rings, setRings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroTitleRef = useRef<HTMLHeadingElement>(null)
+  const heroSubtitleRef = useRef<HTMLParagraphElement>(null)
+  const heroButtonsRef = useRef<HTMLDivElement>(null)
+  const featuresRef = useRef<HTMLDivElement>(null)
+  const processRef = useRef<HTMLDivElement>(null)
+  const exploreRef = useRef<HTMLDivElement>(null)
+  const popularRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchProducts()
   }, [])
 
-  // Scroll animations with Intersection Observer
+  // GSAP animations
   useEffect(() => {
-    // Wait for DOM to be ready
-    const setupObserver = () => {
-      const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-      }
+    if (typeof window === 'undefined') return
 
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible')
-          }
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroTitleRef.current && heroSubtitleRef.current && heroButtonsRef.current) {
+        gsap.from(heroTitleRef.current, {
+          y: 60,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power3.out',
         })
-      }, observerOptions)
-
-      // Observe all elements with scroll animation classes
-      const animatedElements = document.querySelectorAll('.scroll-fade-in, .scroll-scale-in')
-      animatedElements.forEach((el) => observer.observe(el))
-
-      return () => {
-        animatedElements.forEach((el) => observer.unobserve(el))
+        
+        gsap.from(heroSubtitleRef.current, {
+          y: 40,
+          opacity: 0,
+          duration: 1,
+          delay: 0.3,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroButtonsRef.current.children, {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          delay: 0.6,
+          stagger: 0.1,
+          ease: 'power3.out',
+        })
       }
-    }
 
-    // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(setupObserver, 100)
+      // Features section with ScrollTrigger
+      if (featuresRef.current) {
+        gsap.from(featuresRef.current.children, {
+          y: 50,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: featuresRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
 
-    return () => {
-      clearTimeout(timeoutId)
-    }
+      // Process section
+      if (processRef.current) {
+        const processItems = processRef.current.querySelectorAll('.process-item')
+        gsap.from(processItems, {
+          y: 60,
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.9,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: processRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+
+      // Explore section
+      if (exploreRef.current) {
+        const exploreItems = exploreRef.current.querySelectorAll('.explore-item')
+        gsap.from(exploreItems, {
+          y: 80,
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.9,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: exploreRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+
+      // Popular rings section
+      if (popularRef.current && !loading && rings.length > 0) {
+        const ringCards = popularRef.current.querySelectorAll('.ring-card')
+        gsap.from(ringCards, {
+          y: 60,
+          opacity: 0,
+          scale: 0.95,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: popularRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+    })
+
+    return () => ctx.revert()
   }, [rings, loading])
 
   const fetchProducts = async () => {
@@ -127,7 +212,7 @@ export default function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      <section ref={heroRef} className="relative h-screen flex items-center justify-center overflow-hidden">
         {/* Video Background */}
         <video
           autoPlay
@@ -145,19 +230,25 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-20 container-custom section-padding">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="fade-in-up text-4xl md:text-6xl lg:text-7xl font-light text-white mb-6 leading-tight tracking-wide" style={{ animationDelay: '0.2s' }}>
+            <h1 ref={heroTitleRef} className="text-4xl md:text-6xl lg:text-7xl font-light text-white mb-6 leading-tight tracking-wide">
               Timeless Elegance<br />
               <span className="font-normal">Find Your Sparkle</span>
             </h1>
-            <p className="fade-in-up text-base md:text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed font-light" style={{ animationDelay: '0.4s' }}>
+            <p ref={heroSubtitleRef} className="text-base md:text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
               Discover jewellery that captures light, beauty, and emotion,<br />
               timeless pieces to treasure forever.
             </p>
-            <div className="fade-in-up flex flex-col sm:flex-row gap-3 justify-center items-center" style={{ animationDelay: '0.6s' }}>
-              <Link href="/engagement-rings" className="bg-gold-500 hover:bg-gold-600 text-white px-6 py-3 rounded-sm font-light text-sm uppercase tracking-wider transition-colors min-w-[200px]">
+            <div ref={heroButtonsRef} className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Link 
+                href="/engagement-rings" 
+                className="bg-gold-500 hover:bg-gold-600 text-white px-6 py-3 rounded-sm font-light text-sm uppercase tracking-wider transition-all duration-200 min-w-[200px] text-center flex items-center justify-center hover:shadow-lg"
+              >
                 Shop Engagement Rings
               </Link>
-              <Link href="/book-appointment" className="bg-transparent border border-white/50 text-white px-6 py-3 rounded-sm font-light text-sm uppercase tracking-wider hover:bg-white/10 transition-colors min-w-[200px]">
+              <Link 
+                href="/book-appointment" 
+                className="bg-transparent border border-white/50 text-white px-6 py-3 rounded-sm font-light text-sm uppercase tracking-wider hover:bg-white/10 transition-all duration-200 min-w-[200px] text-center flex items-center justify-center hover:border-white"
+              >
                 Book Appointment
               </Link>
             </div>
@@ -168,28 +259,28 @@ export default function Home() {
       {/* Features Section */}
       <section className="section-padding bg-white">
         <div className="container-custom">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-8 text-center">
-            <div className="scroll-fade-in flex flex-col items-center">
+          <div ref={featuresRef} className="grid grid-cols-2 md:grid-cols-6 gap-8 text-center">
+            <div className="flex flex-col items-center">
               <FaHammer className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Crafted In London</h3>
             </div>
-            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.1s' }}>
+            <div className="flex flex-col items-center">
               <FaLeaf className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Ethical Sourcing</h3>
             </div>
-            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.2s' }}>
+            <div className="flex flex-col items-center">
               <FaCertificate className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Certified Diamonds</h3>
             </div>
-            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.3s' }}>
+            <div className="flex flex-col items-center">
               <FaShieldAlt className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Lifetime Warranty</h3>
             </div>
-            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.4s' }}>
+            <div className="flex flex-col items-center">
               <FaRulerCombined className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">Free Resizing</h3>
             </div>
-            <div className="scroll-fade-in flex flex-col items-center" style={{ transitionDelay: '0.5s' }}>
+            <div className="flex flex-col items-center">
               <FaUndo className="text-4xl text-gold-500 mb-4" />
               <h3 className="font-semibold text-primary-900 mb-2">40 Days Returns</h3>
             </div>
@@ -198,9 +289,9 @@ export default function Home() {
       </section>
 
       {/* Process Section */}
-      <section className="section-padding bg-gray-50">
+      <section ref={processRef} className="section-padding bg-gray-50">
         <div className="container-custom">
-          <div className="text-center mb-12 scroll-fade-in">
+          <div className="text-center mb-12">
             <h2 className="text-4xl font-serif font-bold text-primary-900 mb-4">
               Start creating your ring
             </h2>
@@ -209,7 +300,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="scroll-scale-in text-center">
+            <div className="process-item text-center">
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 1
               </div>
@@ -218,7 +309,7 @@ export default function Home() {
                 Browse our collection of exquisite engagement rings and find your perfect style.
               </p>
             </div>
-            <div className="scroll-scale-in text-center" style={{ transitionDelay: '0.2s' }}>
+            <div className="process-item text-center">
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 2
               </div>
@@ -227,7 +318,7 @@ export default function Home() {
                 Our experts are on hand to guide you through the options.
               </p>
             </div>
-            <div className="scroll-scale-in text-center" style={{ transitionDelay: '0.4s' }}>
+            <div className="process-item text-center">
               <div className="w-16 h-16 bg-primary-800 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 3
               </div>
@@ -237,7 +328,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="text-center mt-12 scroll-fade-in">
+          <div className="text-center mt-12">
             <Link href="/engagement-rings" className="btn-primary">
               Explore Ring Designs
             </Link>
@@ -248,7 +339,7 @@ export default function Home() {
       {/* Explore The Range Section */}
       <section className="section-padding bg-white">
         <div className="container-custom max-w-7xl mx-auto">
-          <div className="text-center mb-16 scroll-fade-in">
+          <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-serif font-normal text-primary-900 mb-6 tracking-wide">
               EXPLORE THE RANGE
             </h2>
@@ -259,11 +350,11 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8">
+          <div ref={exploreRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8">
             {/* Engagement Rings */}
             <Link
               href="/engagement-rings"
-              className="scroll-scale-in group flex flex-col"
+              className="explore-item group flex flex-col"
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
@@ -285,8 +376,7 @@ export default function Home() {
             {/* Diamond Rings */}
             <Link
               href="/diamonds"
-              className="scroll-scale-in group flex flex-col"
-              style={{ transitionDelay: '0.1s' }}
+              className="explore-item group flex flex-col"
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
@@ -308,8 +398,7 @@ export default function Home() {
             {/* Wedding Rings */}
             <Link
               href="/wedding-rings"
-              className="scroll-scale-in group flex flex-col"
-              style={{ transitionDelay: '0.2s' }}
+              className="explore-item group flex flex-col"
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
@@ -331,8 +420,7 @@ export default function Home() {
             {/* Eternity Rings */}
             <Link
               href="/eternity-rings"
-              className="scroll-scale-in group flex flex-col"
-              style={{ transitionDelay: '0.3s' }}
+              className="explore-item group flex flex-col"
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
@@ -354,8 +442,7 @@ export default function Home() {
             {/* Earrings */}
             <Link
               href="/jewellery/earrings"
-              className="scroll-scale-in group flex flex-col"
-              style={{ transitionDelay: '0.4s' }}
+              className="explore-item group flex flex-col"
             >
               <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden mb-4">
                 <Image
@@ -380,7 +467,7 @@ export default function Home() {
       {/* Popular Rings Section */}
       <section className="section-padding bg-gray-50">
         <div className="container-custom">
-          <h2 className="scroll-fade-in text-4xl font-serif font-bold text-primary-900 text-center mb-12">
+          <h2 className="text-4xl font-serif font-bold text-primary-900 text-center mb-12">
             Shop popular engagement rings
           </h2>
           {loading ? (
@@ -392,7 +479,7 @@ export default function Home() {
               <p className="text-gray-600">No products available at the moment.</p>
             </div>
           ) : (
-            <div className={`grid gap-8 ${rings.length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : rings.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : rings.length === 3 ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
+            <div ref={popularRef} className={`grid gap-8 ${rings.length === 1 ? 'md:grid-cols-1 max-w-md mx-auto' : rings.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : rings.length === 3 ? 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
               {rings.map((ring, index) => {
                 // CRITICAL: Always use slug, never ID
                 if (!ring.slug) {
@@ -403,8 +490,7 @@ export default function Home() {
                 <Link
                   key={slug}
                   href={`/engagement-rings/${slug}`}
-                  className="scroll-scale-in group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
-                  style={{ transitionDelay: `${index * 0.1}s` }}
+                  className="ring-card group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                 >
                   <div className="h-64 bg-gray-100 relative overflow-hidden">
                     {ring.featured_image_url || ring.image ? (

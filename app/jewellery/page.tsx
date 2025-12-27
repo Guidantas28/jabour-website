@@ -8,7 +8,7 @@ export default function JewelleryPage() {
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl">
             Explore our exquisite collection of fine jewellery, from diamond earrings
-            to elegant pendants and eternity rings.
+            to elegant necklaces and eternity rings.
           </p>
         </div>
       </section>
@@ -18,7 +18,7 @@ export default function JewelleryPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { name: 'Diamond Earrings', href: '/jewellery/earrings' },
-              { name: 'Diamond Pendants', href: '/jewellery/pendants' },
+              { name: 'Diamond Necklaces', href: '/jewellery/pendants' },
               { name: 'Eternity Rings', href: '/jewellery/eternity-rings' },
             ].map((item) => (
               <a

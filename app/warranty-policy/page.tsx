@@ -1,21 +1,78 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger)
 
 export default function WarrantyPolicyPage() {
+  const heroRef = useRef<HTMLDivElement>(null)
+  const heroTitleRef = useRef<HTMLHeadingElement>(null)
+  const heroDividerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // GSAP animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const ctx = gsap.context(() => {
+      // Hero section animations
+      if (heroTitleRef.current && heroDividerRef.current) {
+        gsap.from(heroTitleRef.current, {
+          y: 60,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+        })
+        
+        gsap.from(heroDividerRef.current, {
+          scaleX: 0,
+          opacity: 0,
+          duration: 0.8,
+          delay: 0.6,
+          ease: 'power2.out',
+        })
+      }
+
+      // Content sections
+      if (contentRef.current) {
+        const sections = contentRef.current.querySelectorAll('div.mb-12')
+        gsap.from(sections, {
+          y: 50,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: contentRef.current,
+            start: 'top 75%',
+            toggleActions: 'play none none none',
+          },
+        })
+      }
+    })
+
+    return () => ctx.revert()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-gray-50 to-white section-padding pt-32 pb-20">
+      <section ref={heroRef} className="relative bg-gradient-to-b from-gray-50 to-white section-padding pt-32 pb-20">
         <div className="container-custom max-w-5xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-light text-primary-900 mb-6 tracking-tight">
+          <h1 ref={heroTitleRef} className="text-5xl md:text-6xl lg:text-7xl font-serif font-light text-primary-900 mb-6 tracking-tight">
             Our Warranty Policy
           </h1>
-          <div className="w-24 h-0.5 bg-gold-500 mx-auto mt-8"></div>
+          <div ref={heroDividerRef} className="w-24 h-0.5 bg-gold-500 mx-auto mt-8"></div>
         </div>
       </section>
 
       {/* Content Section */}
       <section className="section-padding bg-white py-24">
-        <div className="container-custom max-w-4xl mx-auto">
+        <div ref={contentRef} className="container-custom max-w-4xl mx-auto">
           {/* Introduction */}
           <div className="mb-12">
             <h2 className="text-2xl font-serif font-normal text-primary-900 mb-6">

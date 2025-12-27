@@ -1,16 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { FaSearch, FaHeart, FaShoppingBag, FaChevronDown, FaUser } from 'react-icons/fa'
 import Cart from './Cart'
 import EngagementDropdown from './EngagementDropdown'
+import SearchModal from './SearchModal'
+import TopBanner from './TopBanner'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const pathname = usePathname()
 
   const mainNavigation = [
@@ -28,7 +30,7 @@ export default function Header() {
     { name: 'DIAMOND', href: '/diamonds', hasDropdown: true },
     { name: 'WEDDING RINGS', href: '/wedding-rings', hasDropdown: false },
     { name: 'EARRINGS', href: '/jewellery/earrings', hasDropdown: false },
-    { name: 'PENDANTS', href: '/jewellery/pendants', hasDropdown: false },
+    { name: 'NECKLACES', href: '/jewellery/pendants', hasDropdown: false },
     { name: 'BRACELETS', href: '/jewellery/bracelets', hasDropdown: false },
     { name: 'GEMSTONES', href: '/jewellery/gemstones', hasDropdown: false },
   ]
@@ -41,19 +43,14 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 w-full left-0 right-0">
-      <nav className="container-custom w-full">
-        {/* Logo Section - Centered */}
-        <div className="flex justify-center py-6 border-b border-gray-200">
-          <Link href="/" className="relative h-16 w-auto">
-            <Image
-              src="/images/logo-jabour-new.png"
-              alt="Jabour & Co"
-              width={200}
-              height={80}
-              className="h-full w-auto object-contain"
-              priority
-            />
+    <>
+      <TopBanner />
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 w-full left-0 right-0">
+        <nav className="container-custom w-full">
+        {/* Logo Section - Centered - Text Logo like Tiffany */}
+        <div className="flex justify-center py-6 md:py-8 border-b border-gray-200">
+          <Link href="/" className="text-3xl md:text-5xl lg:text-6xl font-serif font-normal text-black tracking-[0.05em] hover:opacity-80 transition-opacity uppercase">
+            JABOUR<span className="text-2xl md:text-4xl lg:text-5xl">&</span>CO.
           </Link>
         </div>
 
@@ -83,14 +80,15 @@ export default function Header() {
           <div className="flex items-center space-x-6">
             <Link
               href="/my-account"
-              className="hidden md:flex items-center space-x-2 text-sm font-semibold uppercase tracking-wide text-gray-700 hover:text-gray-900 transition-colors"
+              className="hidden md:flex items-center text-gray-700 hover:text-gray-900 transition-colors"
+              aria-label="My Account"
             >
-              <FaUser className="text-sm" />
-              <span>MY ACCOUNT</span>
+              <FaUser className="text-lg" />
             </Link>
             <button
               className="text-gray-700 hover:text-gray-900 transition-colors"
               aria-label="Search"
+              onClick={() => setIsSearchOpen(true)}
             >
               <FaSearch className="text-lg" />
             </button>
@@ -212,6 +210,8 @@ export default function Header() {
           </div>
         )}
       </nav>
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
+    </>
   )
 }
